@@ -1,0 +1,28 @@
+.workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg);
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.layers {
+  width: var(--layers-width);
+  flex-shrink: 0;
+}
+
+.canvasWrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+}
