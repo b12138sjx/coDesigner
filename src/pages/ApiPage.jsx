@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useProjectStore } from '@/stores/projectStore'
 import { useApiStore } from '@/stores/apiStore'
+import { downloadJsonFile, ensureExt, formatDateStamp, toSafeFileName } from '@/utils/fileExport'
 import styles from './ApiPage.module.css'
 
 const STATUS_OPTIONS = ['待确认', '开发中', '已联调', '已完成']
@@ -23,6 +24,7 @@ export function ApiPage() {
   const project = useProjectStore((state) => state.getProjectById(projectId))
   const apis = useApiStore((state) => (projectId ? state.getApis(projectId) : []))
   const addApi = useApiStore((state) => state.addApi)
+  const setApis = useApiStore((state) => state.setApis)
   const updateApi = useApiStore((state) => state.updateApi)
   const removeApi = useApiStore((state) => state.removeApi)
   const addApiNote = useApiStore((state) => state.addApiNote)
@@ -41,6 +43,27 @@ export function ApiPage() {
     acceptance: '',
   })
   const [noteDrafts, setNoteDrafts] = useState({})
+  const [collapsedApis, setCollapsedApis] = useState({})
+  const [fileTip, setFileTip] = useState('')
+  const tipTimerRef = useRef(null)
+
+  const baseName = useMemo(
+    () => toSafeFileName(project?.name || 'api_collaboration', 'api_collaboration'),
+    [project?.name]
+  )
+
+  const showTip = useCallback((text) => {
+    setFileTip(text)
+    if (tipTimerRef.current) window.clearTimeout(tipTimerRef.current)
+    tipTimerRef.current = window.setTimeout(() => setFileTip(''), 1800)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (tipTimerRef.current) window.clearTimeout(tipTimerRef.current)
+    },
+    []
+  )
 
   const handleCreateApi = (event) => {
     event.preventDefault()
@@ -108,12 +131,109 @@ export function ApiPage() {
     })
   }
 
+  const toggleApiCollapse = (apiId) => {
+    setCollapsedApis((state) => ({
+      ...state,
+      [apiId]: !state[apiId],
+    }))
+  }
+
+  const buildOpenApiExport = () => {
+    const paths = {}
+    apis.forEach((api) => {
+      const path = api.path || '/unknown'
+      const method = String(api.method || 'get').toLowerCase()
+      if (!paths[path]) paths[path] = {}
+      paths[path][method] = {
+        summary: api.name || '未命名接口',
+        description: [api.description, api.frontendNeed, api.backendPlan]
+          .filter(Boolean)
+          .join('\n\n'),
+        tags: ['CoDesigner'],
+        responses: {
+          200: {
+            description: '成功响应',
+            content: {
+              'application/json': {
+                example: api.responseExample || '',
+              },
+            },
+          },
+        },
+        'x-codesigner': {
+          owner: api.owner || '',
+          status: api.status || '',
+          requestExample: api.requestExample || '',
+          acceptance: api.acceptance || '',
+          notes: api.notes || [],
+        },
+      }
+    })
+    return {
+      openapi: '3.0.3',
+      info: {
+        title: `${project?.name || 'CoDesigner'} API`,
+        version: '0.1.0',
+        description: '由 CoDesigner 接口协同模块导出',
+      },
+      paths,
+    }
+  }
+
+  const handleSave = () => {
+    if (!projectId) return
+    setApis(projectId, [...apis])
+    showTip('接口协同已保存')
+  }
+
+  const handleSaveAs = () => {
+    const suggested = `${baseName}_api_${formatDateStamp()}`
+    const inputName = window.prompt('请输入另存为文件名', suggested)
+    if (inputName === null) return
+    const fileName = ensureExt(toSafeFileName(inputName, suggested), '.json')
+    downloadJsonFile(
+      {
+        module: 'api',
+        projectId: projectId || null,
+        projectName: project?.name || null,
+        exportedAt: new Date().toISOString(),
+        apis,
+      },
+      fileName
+    )
+    showTip('已另存为 JSON')
+  }
+
+  const handleExport = () => {
+    const stamp = formatDateStamp()
+    downloadJsonFile(
+      {
+        module: 'api',
+        projectId: projectId || null,
+        projectName: project?.name || null,
+        exportedAt: new Date().toISOString(),
+        apis,
+      },
+      `${baseName}_api_raw_${stamp}.json`
+    )
+    downloadJsonFile(buildOpenApiExport(), `${baseName}_openapi_${stamp}.json`)
+    showTip('已导出 OpenAPI + 原始协同 JSON')
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1>接口协同</h1>
-        <p>{project?.name || '当前项目'} · 前后端需求对齐、参数约定、联调记录一体管理</p>
+        <div>
+          <h1>接口协同</h1>
+          <p>{project?.name || '当前项目'} · 前后端需求对齐、参数约定、联调记录一体管理</p>
+        </div>
+        <div className={styles.fileActions}>
+          <button type="button" onClick={handleSave}>保存</button>
+          <button type="button" onClick={handleSaveAs}>另存为</button>
+          <button type="button" onClick={handleExport}>导出</button>
+        </div>
       </header>
+      {fileTip ? <p className={styles.fileTip}>{fileTip}</p> : null}
       <form className={styles.createForm} onSubmit={handleCreateApi}>
         <input
           value={newApi.name}
@@ -158,12 +278,32 @@ export function ApiPage() {
 
       {apis.length > 0 ? (
         <div className={styles.list}>
-          {apis.map((api) => (
-            <article key={api.id} className={styles.card}>
+          {apis.map((api) => {
+            const isCollapsed = Boolean(collapsedApis[api.id])
+            return (
+              <article
+                key={api.id}
+                className={[styles.card, isCollapsed ? styles.cardCollapsed : ''].filter(Boolean).join(' ')}
+              >
               <div className={[styles.method, styles[`method${api.method}`]].filter(Boolean).join(' ')}>
                 {api.method}
               </div>
               <div className={styles.content}>
+                <div className={styles.cardHead}>
+                  <div className={styles.cardTitleWrap}>
+                    <strong className={styles.cardTitle}>{api.name || '未命名接口'}</strong>
+                    <span className={styles.cardPath}>{api.path || '/'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.collapseBtn}
+                    onClick={() => toggleApiCollapse(api.id)}
+                  >
+                    {isCollapsed ? '展开' : '收起'}
+                  </button>
+                </div>
+                {!isCollapsed && (
+                  <>
                 <div className={styles.row}>
                   <input
                     className={styles.nameInput}
@@ -279,26 +419,44 @@ export function ApiPage() {
                     </button>
                   </div>
                 </div>
+                  </>
+                )}
               </div>
-              <div className={styles.meta}>
-                <span className={styles.status}>{api.status || '待确认'}</span>
-                <input
-                  className={styles.ownerInput}
-                  value={api.owner || ''}
-                  onChange={(event) => updateField(api.id, 'owner', event.target.value)}
-                  placeholder="负责人"
-                />
-                <span className={styles.updatedAt}>更新于 {formatTime(api.updatedAt)}</span>
-                <button
-                  type="button"
-                  className={styles.deleteBtn}
-                  onClick={() => projectId && removeApi(projectId, api.id)}
-                >
-                  删除
-                </button>
-              </div>
+              {!isCollapsed ? (
+                <div className={styles.meta}>
+                  <span className={styles.status}>{api.status || '待确认'}</span>
+                  <input
+                    className={styles.ownerInput}
+                    value={api.owner || ''}
+                    onChange={(event) => updateField(api.id, 'owner', event.target.value)}
+                    placeholder="负责人"
+                  />
+                  <span className={styles.updatedAt}>更新于 {formatTime(api.updatedAt)}</span>
+                  <button
+                    type="button"
+                    className={styles.deleteBtn}
+                    onClick={() => projectId && removeApi(projectId, api.id)}
+                  >
+                    删除
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.metaCompact}>
+                  <span className={styles.status}>{api.status || '待确认'}</span>
+                  <span className={styles.compactText}>{api.owner || '未指定负责人'}</span>
+                  <span className={styles.compactText}>更新于 {formatTime(api.updatedAt)}</span>
+                  <button
+                    type="button"
+                    className={styles.deleteBtn}
+                    onClick={() => projectId && removeApi(projectId, api.id)}
+                  >
+                    删除
+                  </button>
+                </div>
+              )}
             </article>
-          ))}
+            )
+          })}
         </div>
       ) : (
         <div className={styles.placeholder}>当前项目暂无接口定义，可先在样例项目中查看示例。</div>

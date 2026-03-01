@@ -5,12 +5,18 @@ import { SAMPLE_DOCUMENT, SAMPLE_PROJECT_ID } from '@/utils/mockData'
 /**
  * 单个评论/注释：id, 内容, 可选引用原文, 位置(行号), 创建时间
  */
-export function createComment({ text, quote = '', lineStart = null }) {
+export function createComment({
+  text,
+  quote = '',
+  lineStart = null,
+  anchorOffset = null,
+}) {
   return {
     id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     text: text || '',
     quote: quote || '',
     lineStart,
+    anchorOffset,
     createdAt: Date.now(),
     resolved: false,
   }

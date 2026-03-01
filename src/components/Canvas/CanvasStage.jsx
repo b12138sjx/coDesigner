@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef } from 'react'
 import { Tldraw, GeoShapeGeoStyle, createShapeId } from '@tldraw/tldraw'
 import '@tldraw/tldraw/tldraw.css'
 import { useCanvasStore } from '@/stores/canvasStore'
-import { SAMPLE_PROJECT_ID } from '@/utils/mockData'
+import { useCanvasSnapshotStore } from '@/stores/canvasSnapshotStore'
+import { DEMO_CANVAS_PROJECT_IDS } from '@/utils/mockData'
 import styles from './CanvasStage.module.css'
 
 const TOOL_MAP = {
@@ -17,6 +18,37 @@ const TOOL_MAP = {
 
 function clampZoom(value) {
   return Math.min(2, Math.max(0.25, value))
+}
+
+function round2(value) {
+  return Math.round(value * 100) / 100
+}
+
+function radToDeg(rad) {
+  return round2((rad * 180) / Math.PI)
+}
+
+function buildSelectionInfo(editor) {
+  const selectedIds = editor.getSelectedShapeIds()
+  const selectedShapes = editor.getSelectedShapes()
+  const bounds = editor.getSelectionPageBounds()
+  const rotation = editor.getSelectionRotation()
+  const types = Array.from(new Set(selectedShapes.map((shape) => shape.type)))
+
+  return {
+    count: selectedIds.length,
+    ids: selectedIds.map((id) => String(id)),
+    types,
+    bounds: bounds
+      ? {
+          x: round2(bounds.x),
+          y: round2(bounds.y),
+          w: round2(bounds.w),
+          h: round2(bounds.h),
+        }
+      : null,
+    rotation: radToDeg(rotation),
+  }
 }
 
 function getViewportCenterPagePoint(editor) {
@@ -113,6 +145,75 @@ function buildTemplateShapes(templateId, center) {
         { id: createShapeId(), type: 'text', x: center.x + 80, y: center.y - 8, props: { text: '文档' } },
         { id: createShapeId(), type: 'text', x: center.x + 300, y: center.y - 8, props: { text: '登录' } },
       ]
+    case 'hero_banner':
+      return [
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 420,
+          y: center.y - 130,
+          props: { geo: 'rectangle', w: 840, h: 260, text: '首屏 Banner 背景区' },
+        },
+        {
+          id: createShapeId(),
+          type: 'text',
+          x: center.x - 360,
+          y: center.y - 88,
+          props: { text: '一句话价值主张' },
+        },
+        {
+          id: createShapeId(),
+          type: 'text',
+          x: center.x - 360,
+          y: center.y - 48,
+          props: { text: '说明：突出核心能力，辅助用户理解功能场景。' },
+        },
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 360,
+          y: center.y + 12,
+          props: { geo: 'rectangle', w: 140, h: 46, text: '立即开始' },
+        },
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 200,
+          y: center.y + 12,
+          props: { geo: 'rectangle', w: 140, h: 46, text: '查看演示' },
+        },
+      ]
+    case 'side_nav_layout':
+      return [
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 460,
+          y: center.y - 210,
+          props: { geo: 'rectangle', w: 920, h: 420, text: '页面容器' },
+        },
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 440,
+          y: center.y - 190,
+          props: { geo: 'rectangle', w: 220, h: 380, text: '侧栏导航' },
+        },
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 200,
+          y: center.y - 190,
+          props: { geo: 'rectangle', w: 640, h: 80, text: '内容头部 / 筛选区' },
+        },
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 200,
+          y: center.y - 92,
+          props: { geo: 'rectangle', w: 640, h: 282, text: '主内容区' },
+        },
+      ]
     case 'button_group':
       return [
         {
@@ -184,6 +285,61 @@ function buildTemplateShapes(templateId, center) {
           x: center.x + 140,
           y: center.y - 80,
           props: { geo: 'rectangle', w: 200, h: 220, text: '卡片 C' },
+        },
+      ]
+    case 'table_block':
+      return [
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 420,
+          y: center.y - 150,
+          props: { geo: 'rectangle', w: 840, h: 54, text: '表头：名称 | 状态 | 负责人 | 更新时间' },
+        },
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 420,
+          y: center.y - 84,
+          props: { geo: 'rectangle', w: 840, h: 62, text: '行 1' },
+        },
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 420,
+          y: center.y - 10,
+          props: { geo: 'rectangle', w: 840, h: 62, text: '行 2' },
+        },
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 420,
+          y: center.y + 64,
+          props: { geo: 'rectangle', w: 840, h: 62, text: '行 3' },
+        },
+      ]
+    case 'stats_cards':
+      return [
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 350,
+          y: center.y - 80,
+          props: { geo: 'rectangle', w: 220, h: 160, text: '指标 A\n1,284' },
+        },
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x - 110,
+          y: center.y - 80,
+          props: { geo: 'rectangle', w: 220, h: 160, text: '指标 B\n87%' },
+        },
+        {
+          id: createShapeId(),
+          type: 'geo',
+          x: center.x + 130,
+          y: center.y - 80,
+          props: { geo: 'rectangle', w: 220, h: 160, text: '指标 C\n36' },
         },
       ]
     default:
@@ -333,8 +489,7 @@ function getPagePointFromEvent(editor, event) {
 
 function seedSampleCanvas(editor) {
   const center = getViewportCenterPagePoint(editor)
-  const pageShapes = buildSampleShowcaseShapes(center)
-  editor.createShapes(pageShapes)
+  editor.createShapes(buildSampleShowcaseShapes(center))
 }
 
 /**
@@ -342,9 +497,13 @@ function seedSampleCanvas(editor) {
  */
 export function CanvasStage({ projectId, onReady }) {
   const editorRef = useRef(null)
+  const unlistenRef = useRef(null)
+  const saveTimerRef = useRef(null)
+  const selectionListenersRef = useRef(new Set())
   const tool = useCanvasStore((state) => state.tool)
   const zoom = useCanvasStore((state) => state.zoom)
   const showGrid = useCanvasStore((state) => state.showGrid)
+  const saveSnapshot = useCanvasSnapshotStore((state) => state.saveSnapshot)
 
   const setTool = useCallback((toolId) => {
     const editor = editorRef.current
@@ -410,6 +569,19 @@ export function CanvasStage({ projectId, onReady }) {
     editor.zoomToFit()
   }, [])
 
+  const notifySelectionListeners = useCallback(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    const info = buildSelectionInfo(editor)
+    selectionListenersRef.current.forEach((listener) => {
+      try {
+        listener(info)
+      } catch {
+        // ignore individual listener errors
+      }
+    })
+  }, [])
+
   const handleDropTemplate = useCallback(
     (event) => {
       event.preventDefault()
@@ -436,6 +608,24 @@ export function CanvasStage({ projectId, onReady }) {
       setTool(tool)
       const camera = editor.getCamera()
       editor.setCamera({ ...camera, z: clampZoom(zoom) })
+
+      const persistNow = () => {
+        if (!projectId) return
+        try {
+          saveSnapshot(projectId, editor.getSnapshot())
+        } catch {
+          // 忽略本地持久化失败，避免影响绘制主流程
+        }
+      }
+
+      const queuePersist = () => {
+        if (!projectId) return
+        if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = window.setTimeout(() => {
+          persistNow()
+        }, 320)
+      }
+
       onReady?.({
         setTool,
         setGrid,
@@ -444,25 +634,57 @@ export function CanvasStage({ projectId, onReady }) {
         groupSelection,
         ungroupSelection,
         zoomToSelection,
+        getSelectionInfo: () => buildSelectionInfo(editor),
+        subscribeSelection: (listener) => {
+          if (typeof listener !== 'function') return () => {}
+          selectionListenersRef.current.add(listener)
+          listener(buildSelectionInfo(editor))
+          return () => {
+            selectionListenersRef.current.delete(listener)
+          }
+        },
+        getSnapshot: () => editor.getSnapshot(),
+        saveNow: persistNow,
         undo: () => editor.undo(),
         redo: () => editor.redo(),
       })
 
-      // 可在此根据 projectId 加载已有画布数据，或注册协同/持久化
       if (projectId) {
-        // 例如: loadProjectSnapshot(editor, projectId)
+        const storedSnapshot = useCanvasSnapshotStore.getState().getSnapshot(projectId)
+        if (storedSnapshot) {
+          try {
+            editor.loadSnapshot(storedSnapshot)
+          } catch {
+            // 快照异常时使用空白/种子兜底
+          }
+        }
       }
 
-      if (projectId === SAMPLE_PROJECT_ID && editor.getCurrentPageShapes().length === 0) {
+      const shouldSeedDemo =
+        projectId &&
+        DEMO_CANVAS_PROJECT_IDS.includes(projectId) &&
+        !useCanvasSnapshotStore.getState().getSnapshot(projectId) &&
+        editor.getCurrentPageShapes().length === 0
+      if (shouldSeedDemo) {
         seedSampleCanvas(editor)
         editor.zoomToFit()
+        queuePersist()
       }
+
+      unlistenRef.current = editor.store.listen(() => {
+        queuePersist()
+        notifySelectionListeners()
+      })
+
+      notifySelectionListeners()
     },
     [
       groupSelection,
       insertTemplate,
+      notifySelectionListeners,
       onReady,
       projectId,
+      saveSnapshot,
       setGrid,
       setTool,
       setZoom,
@@ -488,16 +710,33 @@ export function CanvasStage({ projectId, onReady }) {
 
   useEffect(
     () => () => {
+      const editor = editorRef.current
+      if (editor && projectId) {
+        try {
+          saveSnapshot(projectId, editor.getSnapshot())
+        } catch {
+          // ignore
+        }
+      }
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+      }
+      if (unlistenRef.current) {
+        unlistenRef.current()
+        unlistenRef.current = null
+      }
+      selectionListenersRef.current.clear()
       onReady?.(null)
     },
-    [onReady]
+    [onReady, projectId, saveSnapshot]
   )
 
   return (
     <div className={styles.stage} onDragOver={handleDragOver} onDrop={handleDropTemplate}>
       <Tldraw
         onMount={handleMount}
-        hideUi
+        hideUi={false}
         className={styles.tldraw}
         components={{
           // 可覆盖 tldraw 默认 UI，例如隐藏顶部菜单、使用自定义 Toolbar 等

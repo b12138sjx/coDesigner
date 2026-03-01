@@ -38,6 +38,25 @@
   transition: background 0.15s, color 0.15s;
 }
 
+.fileBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.fileBtn:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
 .iconBtn:hover:not(:disabled),
 .toolBtn:hover {
   background: rgba(255, 255, 255, 0.08);
@@ -60,6 +79,11 @@
 
 .toolLabel {
   font-size: 12px;
+}
+
+.tip {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
 }
 
 .toggle {

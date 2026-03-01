@@ -1,4 +1,5 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useProjectStore } from '@/stores/projectStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -10,6 +11,7 @@ function resolveProjectIdFromPath(pathname) {
 }
 
 export function AppSidebar() {
+  const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const projects = useProjectStore((state) => state.projects)
@@ -50,21 +52,33 @@ export function AppSidebar() {
   }
 
   return (
-    <aside className={styles.sidebar}>
+    <aside className={[styles.sidebar, collapsed ? styles.sidebarCollapsed : ''].filter(Boolean).join(' ')}>
       <div className={styles.logo}>
         <span className={styles.logoIcon}>Co</span>
-        <div className={styles.logoText}>
-          <strong>Designer</strong>
-          <span>Collaborative Workspace</span>
-        </div>
+        {!collapsed && (
+          <div className={styles.logoText}>
+            <strong>Designer</strong>
+            <span>Collaborative Workspace</span>
+          </div>
+        )}
+        <button
+          type="button"
+          className={styles.sidebarCollapseBtn}
+          onClick={() => setCollapsed((prev) => !prev)}
+          title={collapsed ? '展开侧栏' : '折叠侧栏'}
+        >
+          {collapsed ? '›' : '‹'}
+        </button>
       </div>
 
       <div className={styles.userPanel}>
         <span className={styles.userAvatar}>{userInitial}</span>
-        <div className={styles.userMeta}>
-          <p>{authMode === 'guest' ? '访客模式' : '账号模式'}</p>
-          <strong>{userName}</strong>
-        </div>
+        {!collapsed && (
+          <div className={styles.userMeta}>
+            <p>{authMode === 'guest' ? '访客模式' : '账号模式'}</p>
+            <strong>{userName}</strong>
+          </div>
+        )}
         <button
           type="button"
           className={styles.themeButton}
@@ -76,34 +90,37 @@ export function AppSidebar() {
       </div>
 
       <nav className={styles.nav}>
-        <p className={styles.navSection}>平台</p>
+        {!collapsed && <p className={styles.navSection}>平台</p>}
         <NavLink
           to="/projects"
           className={({ isActive }) =>
             [styles.navItem, isActive ? styles.navItemActive : ''].filter(Boolean).join(' ')
           }
+          title="项目首页"
         >
           <span className={styles.navIcon}>🏠</span>
-          项目首页
+          {!collapsed && '项目首页'}
         </NavLink>
 
         <div className={styles.projectScope}>
-          <p className={styles.navSection}>项目空间</p>
-          <label className={styles.switcher}>
-            <span>切换项目</span>
-            <select
-              value={activeProjectId || projects[0]?.id || ''}
-              onChange={handleProjectSwitch}
-              disabled={projects.length === 0}
-            >
-              {projects.length === 0 && <option value="">暂无项目</option>}
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {!collapsed && <p className={styles.navSection}>项目空间</p>}
+          {!collapsed && (
+            <label className={styles.switcher}>
+              <span>切换项目</span>
+              <select
+                value={activeProjectId || projects[0]?.id || ''}
+                onChange={handleProjectSwitch}
+                disabled={projects.length === 0}
+              >
+                {projects.length === 0 && <option value="">暂无项目</option>}
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           {activeProject && (
             <div className={styles.projectTree}>
@@ -115,9 +132,10 @@ export function AppSidebar() {
                     .join(' ')
                 }
                 end
+                title={activeProject.name}
               >
                 <span className={styles.navIcon}>📌</span>
-                {activeProject.name}
+                {!collapsed && activeProject.name}
               </NavLink>
 
               {moduleItems.map(({ to, label, icon }) => (
@@ -129,9 +147,10 @@ export function AppSidebar() {
                       .filter(Boolean)
                       .join(' ')
                   }
+                  title={label}
                 >
                   <span className={styles.navIcon}>{icon}</span>
-                  {label}
+                  {!collapsed && label}
                 </NavLink>
               ))}
             </div>
@@ -140,7 +159,7 @@ export function AppSidebar() {
       </nav>
 
       <button type="button" className={styles.resetButton} onClick={handleResetEntry}>
-        退出到入口页
+        {collapsed ? '⎋' : '退出到入口页'}
       </button>
     </aside>
   )

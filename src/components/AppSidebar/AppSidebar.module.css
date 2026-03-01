@@ -5,6 +5,11 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  transition: width 0.2s ease;
+}
+
+.sidebarCollapsed {
+  width: 88px;
 }
 
 .logo {
@@ -14,6 +19,22 @@
   gap: 10px;
   padding: 12px 14px;
   border-bottom: 1px solid var(--color-sidebar-border-soft);
+}
+
+.sidebarCollapseBtn {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--color-sidebar-border-soft);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.sidebarCollapseBtn:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
 }
 
 .logoIcon {
@@ -62,6 +83,11 @@
   gap: 10px;
 }
 
+.sidebarCollapsed .userPanel {
+  justify-content: center;
+  padding: 8px 6px;
+}
+
 .userAvatar {
   width: 32px;
   height: 32px;
@@ -107,6 +133,10 @@
   border: 1px solid var(--color-sidebar-border-soft);
 }
 
+.sidebarCollapsed .projectScope {
+  padding: 8px 6px;
+}
+
 .switcher {
   display: flex;
   flex-direction: column;
@@ -148,6 +178,11 @@
   font-size: 0.9rem;
 }
 
+.sidebarCollapsed .projectChild {
+  margin-left: 0;
+  padding-left: 12px;
+}
+
 .projectChild::before {
   content: '';
   position: absolute;
@@ -155,6 +190,10 @@
   top: 50%;
   width: 8px;
   border-top: 1px solid var(--color-sidebar-border-soft);
+}
+
+.sidebarCollapsed .projectChild::before {
+  display: none;
 }
 
 .navItem {
@@ -167,6 +206,11 @@
   text-decoration: none;
   border: 1px solid transparent;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.sidebarCollapsed .navItem {
+  justify-content: center;
+  padding: 10px 8px;
 }
 
 .navItem:hover {
@@ -196,6 +240,10 @@
   cursor: pointer;
 }
 
+.sidebarCollapsed .resetButton {
+  margin: 10px;
+}
+
 .resetButton:hover {
   color: var(--color-text);
   border-color: var(--color-primary);
@@ -209,6 +257,10 @@
   border: 1px solid var(--color-sidebar-border-soft);
   background: var(--color-input-bg);
   cursor: pointer;
+}
+
+.sidebarCollapsed .themeButton {
+  margin-left: 0;
 }
 
 .themeButton:hover {

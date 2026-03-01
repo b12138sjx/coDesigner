@@ -6,6 +6,10 @@
 
 .header {
   margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .header h1 {
@@ -16,6 +20,33 @@
 .header p {
   color: var(--color-text-muted);
   font-size: 0.95rem;
+}
+
+.fileActions {
+  display: flex;
+  gap: 8px;
+}
+
+.fileActions button {
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fileActions button:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
+.fileTip {
+  margin: -8px 0 12px;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
 }
 
 .placeholder {
@@ -70,6 +101,10 @@
   padding: 14px;
 }
 
+.cardCollapsed {
+  grid-template-columns: 78px 1fr 246px;
+}
+
 .method {
   border-radius: 8px;
   background: rgba(59, 130, 246, 0.18);
@@ -104,6 +139,50 @@
 
 .content {
   min-width: 0;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cardTitleWrap {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardTitle {
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.cardPath {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collapseBtn {
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  padding: 0 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.collapseBtn:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
 }
 
 .row {
@@ -261,6 +340,21 @@
   color: var(--color-text-muted);
 }
 
+.metaCompact {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.compactText {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 .status {
   border: 1px solid var(--color-border);
   border-radius: 999px;
@@ -307,6 +401,11 @@
   }
 
   .meta {
+    border-top: 1px solid var(--color-border);
+    padding-top: 10px;
+  }
+
+  .metaCompact {
     border-top: 1px solid var(--color-border);
     padding-top: 10px;
   }

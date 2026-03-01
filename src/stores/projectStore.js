@@ -2,7 +2,12 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { SAMPLE_PROJECT } from '@/utils/mockData'
 
-const defaultProject = { id: 'default', name: '默认项目', updatedAt: Date.now() }
+const defaultProject = {
+  id: 'default',
+  name: '默认项目',
+  brief: '通用项目空间，可进行画布设计、文档编写与接口维护。',
+  updatedAt: Date.now(),
+}
 const baseProjects = [SAMPLE_PROJECT, defaultProject]
 
 export const useProjectStore = create(
@@ -21,6 +26,7 @@ export const useProjectStore = create(
         const project = {
           id,
           name: name?.trim() || `新项目 ${state.projects.length + 1}`,
+          brief: '',
           updatedAt: Date.now(),
         }
         set((current) => ({

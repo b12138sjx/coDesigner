@@ -1,8 +1,12 @@
 export const SAMPLE_PROJECT_ID = 'sample_project'
 
+/** 进入画布设计且无已保存快照时，会注入 Mock 演示内容的项目 ID（如默认项目、样例项目） */
+export const DEMO_CANVAS_PROJECT_IDS = ['default', 'sample_project']
+
 export const SAMPLE_PROJECT = {
   id: SAMPLE_PROJECT_ID,
   name: '样例项目 · 协同设计演示',
+  brief: '演示画布设计、智能文档、接口协同三个模块的一体化使用。',
   updatedAt: Date.now() - 1000 * 60 * 60 * 4,
 }
 

@@ -92,11 +92,7 @@ export function DocumentEditor({ value, onChange, onAddComment, editorRef }) {
         </svg>
       ),
       execute: (state) => {
-        if (state?.selectedText?.trim()) {
-          onAddComment?.(state.selectedText, state.selection)
-        } else {
-          onAddComment?.('', null)
-        }
+        onAddComment?.(state?.selectedText || '', state?.selection || null)
       },
     },
   ]

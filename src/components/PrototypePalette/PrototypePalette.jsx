@@ -18,6 +18,8 @@ const TEMPLATE_GROUPS = [
       { id: 'page_frame', icon: '🧱', label: '页面框架', hint: '带导航栏和内容区域' },
       { id: 'title_block', icon: '📰', label: '标题区', hint: '标题 + 副标题 + 描述' },
       { id: 'nav_bar', icon: '🧭', label: '导航栏', hint: '顶部导航结构' },
+      { id: 'hero_banner', icon: '🏞️', label: '首屏 Banner', hint: '主视觉 + 主次按钮' },
+      { id: 'side_nav_layout', icon: '📚', label: '侧栏布局', hint: '左侧导航 + 右侧内容区' },
     ],
   },
   {
@@ -26,6 +28,8 @@ const TEMPLATE_GROUPS = [
       { id: 'button_group', icon: '🔘', label: '按钮组', hint: '主按钮 + 次按钮 + 幽灵按钮' },
       { id: 'form_block', icon: '⌨️', label: '表单块', hint: '输入框 + 提交按钮' },
       { id: 'card_list', icon: '🗂', label: '卡片列表', hint: '常用内容卡片布局' },
+      { id: 'table_block', icon: '📊', label: '数据表格', hint: '列表页常见表格结构' },
+      { id: 'stats_cards', icon: '📈', label: '指标卡片', hint: '仪表盘关键指标区' },
     ],
   },
 ]
@@ -59,7 +63,7 @@ export function PrototypePalette({
     <aside className={[styles.panel, className].filter(Boolean).join(' ')}>
       <div className={styles.header}>
         <h3 className={styles.title}>低保真组件库</h3>
-        <p className={styles.subtitle}>以页面框架、标题、按钮组等模块搭建原型</p>
+        <p className={styles.subtitle}>绘图工具 + 页面模块一体化编辑</p>
         <input
           type="text"
           className={styles.searchInput}

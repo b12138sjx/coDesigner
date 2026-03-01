@@ -20,7 +20,7 @@ export function DesignWorkspace({ projectId }) {
 
   return (
     <div className={styles.workspace}>
-      <Toolbar projectId={projectId} canvasApi={canvasApi} onSetTool={handleSetTool} />
+      <Toolbar projectId={projectId} canvasApi={canvasApi} />
       <div className={styles.body}>
         <aside
           className={[
@@ -49,8 +49,8 @@ export function DesignWorkspace({ projectId }) {
           ) : (
             <div className={styles.panelRail}>
               <button type="button" onClick={() => handleSetTool('select')} title="选择工具">↖</button>
-              <button type="button" onClick={() => handleSetTool('frame')} title="框架工具">▣</button>
               <button type="button" onClick={() => handleSetTool('draw')} title="手绘工具">✏</button>
+              <button type="button" onClick={() => canvasApi?.insertTemplate?.('page_frame')} title="插入页面框架">🧱</button>
               <button
                 type="button"
                 onClick={() => canvasApi?.insertTemplate?.('button_group')}
@@ -62,7 +62,7 @@ export function DesignWorkspace({ projectId }) {
           )}
         </aside>
         <div className={styles.canvasWrap}>
-          <CanvasStage projectId={projectId} onReady={setCanvasApi} />
+          <CanvasStage key={projectId} projectId={projectId} onReady={setCanvasApi} />
         </div>
         <aside
           className={[
@@ -82,12 +82,15 @@ export function DesignWorkspace({ projectId }) {
             {rightCollapsed ? '‹' : '›'}
           </button>
           {!rightCollapsed ? (
-            <PropertySidebar className={styles.sidebar} canvasApi={canvasApi} />
+            <PropertySidebar
+              className={styles.sidebar}
+              canvasApi={canvasApi}
+              projectId={projectId}
+            />
           ) : (
             <div className={styles.panelRail}>
               <button type="button" onClick={() => canvasApi?.zoomToSelection?.()} title="聚焦选中">⌖</button>
-              <button type="button" onClick={() => canvasApi?.groupSelection?.()} title="组合">组</button>
-              <button type="button" onClick={() => canvasApi?.ungroupSelection?.()} title="解组">解</button>
+              <button type="button" onClick={() => canvasApi?.setZoom?.(1)} title="重置到 100%">100%</button>
             </div>
           )}
         </aside>

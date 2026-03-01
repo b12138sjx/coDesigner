@@ -62,6 +62,7 @@
 }
 
 .card {
+  position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -71,9 +72,131 @@
   gap: 12px;
 }
 
+.cardMain {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.cardContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardMenuWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cardMenuBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: -4px -4px 0 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.cardMenuBtn:hover {
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.06));
+  color: var(--color-text);
+}
+
+.cardDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 120px;
+  padding: 6px 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 10;
+}
+
+.dropdownItem,
+.dropdownItemDanger {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.dropdownItem:hover {
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.06));
+}
+
+.dropdownItemDanger {
+  color: var(--color-danger, #dc2626);
+}
+
+.dropdownItemDanger:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.cardRename {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.renameInput {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  font-size: 1rem;
+}
+
+.renameActions {
+  display: flex;
+  gap: 8px;
+}
+
+.renameSave,
+.renameCancel {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.renameSave {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+}
+
+.renameCancel {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
 .card h3 {
   font-size: 1.05rem;
   margin-bottom: 8px;
+}
+
+.cardBrief {
+  color: var(--color-text-secondary, var(--color-text-muted));
+  font-size: 0.9rem;
+  margin: -4px 0 6px;
+  line-height: 1.4;
 }
 
 .card p {

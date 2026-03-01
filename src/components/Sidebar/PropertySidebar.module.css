@@ -1,12 +1,20 @@
 .sidebar {
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
-  padding: 16px;
+  padding: 14px;
   overflow-y: auto;
 }
 
 .section {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .title {
@@ -15,6 +23,13 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.strong {
+  font-size: 0.92rem;
+  color: var(--color-text);
+  font-weight: 600;
   margin-bottom: 8px;
 }
 
@@ -31,8 +46,53 @@
   accent-color: var(--color-primary);
 }
 
+.quickZoom {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.quickZoom button {
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.74rem;
+}
+
+.quickZoom button:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
+.kvList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kvRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.kvRow strong {
+  color: var(--color-text);
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+
 .muted {
   font-size: 12px;
   color: var(--color-text-muted);
   margin-top: 4px;
+  line-height: 1.45;
 }

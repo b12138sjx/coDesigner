@@ -128,7 +128,23 @@
   min-height: 60px;
 }
 
+.lineInput {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
 .textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.lineInput:focus {
   outline: none;
   border-color: var(--color-primary);
 }
@@ -224,6 +240,7 @@
 .itemActions {
   display: flex;
   gap: 4px;
+  align-items: center;
 }
 
 .metaBtn {
@@ -237,4 +254,12 @@
 
 .metaBtn:hover {
   color: var(--color-primary);
+}
+
+.lineTag {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 1px 6px;
 }

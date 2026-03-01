@@ -4,10 +4,29 @@ import styles from './AnnotationsPanel.module.css'
 
 const EMPTY_DOC = { content: '', comments: [] }
 
+function getLineNumberByOffset(content, offset) {
+  if (!content || typeof offset !== 'number' || offset < 0) return null
+  const safeOffset = Math.min(offset, content.length)
+  return content.slice(0, safeOffset).split('\n').length
+}
+
+function getOffsetByLineNumber(content, lineNumber) {
+  if (!content || !lineNumber || lineNumber < 1) return 0
+  const lines = content.split('\n')
+  const maxLine = Math.min(lineNumber, lines.length)
+  let offset = 0
+  for (let i = 0; i < maxLine - 1; i += 1) {
+    offset += lines[i].length + 1
+  }
+  return offset
+}
+
 export function AnnotationsPanel({
   projectId,
+  content = '',
   pendingComment,
   onClearPending,
+  onLocateComment,
   collapsed = false,
   onToggleCollapse,
 }) {
@@ -23,6 +42,8 @@ export function AnnotationsPanel({
   const comments = doc?.comments || []
   const [formText, setFormText] = useState('')
   const [formQuote, setFormQuote] = useState('')
+  const [formLine, setFormLine] = useState('')
+  const [formAnchorOffset, setFormAnchorOffset] = useState(null)
   const [isAdding, setIsAdding] = useState(false)
 
   const pendingQuote = pendingComment?.quote
@@ -30,14 +51,24 @@ export function AnnotationsPanel({
 
   useEffect(() => {
     if (pendingQuote !== undefined || pendingSelection !== undefined) {
+      const selectionStart =
+        typeof pendingSelection?.start === 'number' ? pendingSelection.start : null
       setFormQuote(typeof pendingQuote === 'string' ? pendingQuote : '')
+      setFormAnchorOffset(selectionStart)
+      setFormLine(
+        selectionStart !== null
+          ? String(getLineNumberByOffset(content, selectionStart) || '')
+          : ''
+      )
       setIsAdding(true)
     }
-  }, [pendingQuote, pendingSelection])
+  }, [content, pendingQuote, pendingSelection])
 
   const startAdd = () => {
     setFormQuote('')
     setFormText('')
+    setFormLine('')
+    setFormAnchorOffset(null)
     setIsAdding(true)
     onClearPending?.()
   }
@@ -46,15 +77,31 @@ export function AnnotationsPanel({
     setIsAdding(false)
     setFormText('')
     setFormQuote('')
+    setFormLine('')
+    setFormAnchorOffset(null)
     onClearPending?.()
   }
 
   const submitComment = () => {
     if (!projectId) return
-    const comment = createComment({ text: formText.trim(), quote: formQuote.trim() })
+    const normalizedLine = Number(formLine) > 0 ? Number(formLine) : null
+    const normalizedOffset =
+      typeof formAnchorOffset === 'number'
+        ? formAnchorOffset
+        : normalizedLine
+          ? getOffsetByLineNumber(content, normalizedLine)
+          : null
+    const comment = createComment({
+      text: formText.trim(),
+      quote: formQuote.trim(),
+      lineStart: normalizedLine,
+      anchorOffset: normalizedOffset,
+    })
     addComment(projectId, comment)
     setFormText('')
     setFormQuote('')
+    setFormLine('')
+    setFormAnchorOffset(null)
     setIsAdding(false)
     onClearPending?.()
   }
@@ -108,6 +155,20 @@ export function AnnotationsPanel({
               autoFocus
             />
           </div>
+          <div className={styles.field}>
+            <label className={styles.label}>注释位置（行号）</label>
+            <input
+              className={styles.lineInput}
+              type="number"
+              min="1"
+              value={formLine}
+              onChange={(e) => {
+                setFormLine(e.target.value)
+                setFormAnchorOffset(null)
+              }}
+              placeholder="如：12"
+            />
+          </div>
           <div className={styles.actions}>
             <button type="button" className={styles.cancelBtn} onClick={cancelAdd}>
               取消
@@ -140,6 +201,15 @@ export function AnnotationsPanel({
                   {new Date(c.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </span>
                 <span className={styles.itemActions}>
+                  <button
+                    type="button"
+                    className={styles.metaBtn}
+                    onClick={() => onLocateComment?.(c)}
+                    title="定位到正文"
+                  >
+                    定位
+                  </button>
+                  {c.lineStart ? <span className={styles.lineTag}>L{c.lineStart}</span> : null}
                   <button
                     type="button"
                     className={styles.metaBtn}

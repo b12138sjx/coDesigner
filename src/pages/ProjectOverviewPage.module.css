@@ -17,6 +17,112 @@
   color: var(--color-text-muted);
 }
 
+.intro {
+  position: relative;
+  margin-bottom: 28px;
+  padding: 16px 20px;
+  padding-top: 14px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.introHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.introLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.introEditIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: -4px -4px 0 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.introEditIcon:hover {
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.06));
+  color: var(--color-primary, #2563eb);
+}
+
+.introText,
+.introPlaceholder {
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary, var(--color-text-muted));
+  cursor: pointer;
+  min-height: 2.5em;
+}
+
+.introPlaceholder {
+  color: var(--color-text-muted);
+}
+
+.introText p,
+.introPlaceholder {
+  margin: 0 0 6px;
+}
+
+.introText p:last-child,
+.introPlaceholder {
+  margin-bottom: 0;
+}
+
+.introTextarea {
+  display: block;
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  font-size: 1.08rem;
+  line-height: 1.6;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.introActions {
+  display: flex;
+  gap: 10px;
+}
+
+.introBtnPrimary,
+.introBtnSecondary {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.introBtnPrimary {
+  background: var(--color-primary, #2563eb);
+  color: #fff;
+}
+
+.introBtnSecondary {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

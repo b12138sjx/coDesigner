@@ -5,9 +5,7 @@ import { SAMPLE_APIS, SAMPLE_PROJECT_ID } from '@/utils/mockData'
 export const useApiStore = create(
   persist(
     (set) => ({
-      apisByProject: {
-        [SAMPLE_PROJECT_ID]: SAMPLE_APIS,
-      },
+      apisByProject: { [SAMPLE_PROJECT_ID]: SAMPLE_APIS },
       setApis: (projectId, apis) =>
         set((state) => ({
           apisByProject: { ...state.apisByProject, [projectId]: apis },
