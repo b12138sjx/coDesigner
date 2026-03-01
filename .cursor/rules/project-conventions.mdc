@@ -1,0 +1,14 @@
+---
+description: CoDesigner 项目代码约定（React、Zustand、样式、路径）
+globs: src/**/*
+alwaysApply: false
+---
+
+# CoDesigner 项目约定
+
+- **组件**: 函数组件，一个目录一个组件，主文件与目录同名（如 `Toolbar/Toolbar.jsx`）。
+- **样式**: 使用 CSS Modules（`*.module.css`），与组件同目录，类名用 `styles.xxx`。
+- **路径**: 使用 `@/` 别名指向 `src/`（如 `import { useCanvasStore } from '@/stores/canvasStore'`）。
+- **状态**: 仅用 Zustand，store 在 `src/stores/`，命名 `useXxxStore`；不在组件里引入多个 store 时用 Context。
+- **路由**: 页面组件从 `react-router-dom` 取 `useParams`/`useNavigate`，路由定义在 `App.jsx`。
+- **新增页面**: 在 `App.jsx` 添加 Route，在 `components/AppSidebar/AppSidebar.jsx` 的 `navItems` 中添加导航。

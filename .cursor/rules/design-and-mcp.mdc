@@ -1,0 +1,9 @@
+---
+description: 设计稿转代码与浏览器测试时使用的 MCP 与工具
+alwaysApply: true
+---
+
+# 设计稿与浏览器测试
+
+- **Figma**: 用户提供 figma.com 链接或提到“按设计稿实现”“Figma”时，优先用 Figma MCP（get_design_context）获取设计与参考代码，再按本项目的 React + CSS Modules 与现有组件风格做适配。
+- **浏览器/端到端**: 需要验证页面交互、截图、自动化操作时，使用 Chrome DevTools MCP（如 take_snapshot、take_screenshot、click、fill、navigate_page 等），并先 list_pages / select_page 确认操作的是正确页面。
