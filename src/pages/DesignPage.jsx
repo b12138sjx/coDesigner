@@ -6,7 +6,7 @@ export function DesignPage() {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <DesignWorkspace projectId={projectId || undefined} />
+      <DesignWorkspace projectId={projectId} />
     </div>
   )
 }

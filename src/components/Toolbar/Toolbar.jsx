@@ -4,13 +4,14 @@ import styles from './Toolbar.module.css'
 const TOOLS = [
   { id: 'select', label: '选择', icon: '↖' },
   { id: 'draw', label: '绘制', icon: '✏' },
+  { id: 'frame', label: '框架', icon: '▣' },
   { id: 'rect', label: '矩形', icon: '▢' },
   { id: 'ellipse', label: '椭圆', icon: '○' },
   { id: 'text', label: '文本', icon: 'T' },
   { id: 'arrow', label: '箭头', icon: '→' },
 ]
 
-export function Toolbar() {
+export function Toolbar({ canvasApi, onSetTool }) {
   const tool = useCanvasStore((s) => s.tool)
   const setTool = useCanvasStore((s) => s.setTool)
   const showGrid = useCanvasStore((s) => s.showGrid)
@@ -20,6 +21,36 @@ export function Toolbar() {
   const undo = useCanvasStore((s) => s.undo)
   const redo = useCanvasStore((s) => s.redo)
 
+  const handleSetTool = (toolId) => {
+    if (onSetTool) {
+      onSetTool(toolId)
+      return
+    }
+    setTool(toolId)
+    canvasApi?.setTool?.(toolId)
+  }
+
+  const handleUndo = () => {
+    if (canvasApi?.undo) {
+      canvasApi.undo()
+      return
+    }
+    undo()
+  }
+
+  const handleRedo = () => {
+    if (canvasApi?.redo) {
+      canvasApi.redo()
+      return
+    }
+    redo()
+  }
+
+  const handleToggleGrid = (checked) => {
+    setShowGrid(checked)
+    canvasApi?.setGrid?.(checked)
+  }
+
   return (
     <header className={styles.toolbar}>
       <div className={styles.toolGroup}>
@@ -27,8 +58,8 @@ export function Toolbar() {
           type="button"
           className={styles.iconBtn}
           title="撤销"
-          disabled={!canUndo}
-          onClick={undo}
+          disabled={!canvasApi ? !canUndo : false}
+          onClick={handleUndo}
         >
           ↶
         </button>
@@ -36,10 +67,31 @@ export function Toolbar() {
           type="button"
           className={styles.iconBtn}
           title="重做"
-          disabled={!canRedo}
-          onClick={redo}
+          disabled={!canvasApi ? !canRedo : false}
+          onClick={handleRedo}
         >
           ↷
+        </button>
+      </div>
+      <div className={styles.toolGroup}>
+        <button type="button" className={styles.iconBtn} title="组合选中" onClick={() => canvasApi?.groupSelection?.()}>
+          组
+        </button>
+        <button
+          type="button"
+          className={styles.iconBtn}
+          title="解组选中"
+          onClick={() => canvasApi?.ungroupSelection?.()}
+        >
+          解
+        </button>
+        <button
+          type="button"
+          className={styles.iconBtn}
+          title="聚焦选中"
+          onClick={() => canvasApi?.zoomToSelection?.()}
+        >
+          ⌖
         </button>
       </div>
       <div className={styles.toolGroup}>
@@ -49,7 +101,7 @@ export function Toolbar() {
             type="button"
             className={[styles.toolBtn, tool === t.id ? styles.toolBtnActive : ''].join(' ')}
             title={t.label}
-            onClick={() => setTool(t.id)}
+            onClick={() => handleSetTool(t.id)}
           >
             <span className={styles.toolIcon}>{t.icon}</span>
             <span className={styles.toolLabel}>{t.label}</span>
@@ -61,7 +113,7 @@ export function Toolbar() {
           <input
             type="checkbox"
             checked={showGrid}
-            onChange={(e) => setShowGrid(e.target.checked)}
+            onChange={(e) => handleToggleGrid(e.target.checked)}
           />
           <span>网格</span>
         </label>

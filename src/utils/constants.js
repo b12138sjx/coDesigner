@@ -1,10 +1,12 @@
 export const APP_NAME = 'CoDesigner'
 
 export const ROUTES = {
-  HOME: '/',
-  DESIGN: '/design',
-  DOCUMENTS: '/documents',
-  API: '/api',
+  ENTRY: '/entry',
+  PROJECTS: '/projects',
+  PROJECT: '/project/:projectId',
+  DESIGN: '/design/:projectId',
+  DOCUMENTS: '/documents/:projectId',
+  API: '/api/:projectId',
 }
 
 export const TOOLS = {

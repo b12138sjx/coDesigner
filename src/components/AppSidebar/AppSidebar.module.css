@@ -1,32 +1,160 @@
 .sidebar {
   width: var(--sidebar-width);
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-sidebar-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
 }
 
 .logo {
-  height: var(--toolbar-height);
+  min-height: 66px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px;
-  font-weight: 700;
-  font-size: 1.1rem;
-  border-bottom: 1px solid var(--color-border);
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-sidebar-border-soft);
 }
 
 .logoIcon {
-  color: var(--color-primary);
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  font-weight: 700;
+}
+
+.logoText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.logoText strong {
+  letter-spacing: 0.02em;
+}
+
+.logoText span {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
 }
 
 .nav {
-  padding: 12px 8px;
+  padding: 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  flex: 1;
+}
+
+.userPanel {
+  margin: 12px 12px 6px;
+  padding: 10px;
+  border: 1px solid var(--color-sidebar-border-soft);
+  border-radius: 12px;
+  background: var(--color-sidebar-soft-bg);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.userAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary-contrast);
+  background: rgba(59, 130, 246, 0.24);
+  font-weight: 700;
+}
+
+.userMeta {
+  min-width: 0;
+}
+
+.userMeta p {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.userMeta strong {
+  display: block;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navSection {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 8px 8px 0;
+}
+
+.projectScope {
+  margin-top: 6px;
+  padding: 10px 8px 8px;
+  border-radius: 12px;
+  background: var(--color-sidebar-soft-bg);
+  border: 1px solid var(--color-sidebar-border-soft);
+}
+
+.switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 8px 10px;
+}
+
+.switcher span {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.switcher select {
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--color-sidebar-border-soft);
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  padding: 0 10px;
+}
+
+.switcher select:disabled {
+  opacity: 0.6;
+}
+
+.projectTree {
+  position: relative;
+}
+
+.projectRoot {
+  font-weight: 600;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.projectChild {
+  margin-left: 20px;
+  padding-left: 11px;
+  position: relative;
+  font-size: 0.9rem;
+}
+
+.projectChild::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 8px;
+  border-top: 1px solid var(--color-sidebar-border-soft);
 }
 
 .navItem {
@@ -34,22 +162,55 @@
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--color-text-muted);
   text-decoration: none;
-  transition: background 0.15s, color 0.15s;
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .navItem:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-sidebar-hover);
+  border-color: var(--color-sidebar-border-soft);
   color: var(--color-text);
 }
 
 .navItemActive {
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--color-primary);
+  background: var(--color-nav-active-bg);
+  color: var(--color-nav-active-text);
+  border-color: var(--color-nav-active-border);
+  font-weight: 600;
 }
 
 .navIcon {
   font-size: 1.1rem;
+}
+
+.resetButton {
+  margin: 12px;
+  height: 36px;
+  border: 1px solid var(--color-sidebar-border-soft);
+  border-radius: 10px;
+  background: var(--color-sidebar-soft-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.resetButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
+.themeButton {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--color-sidebar-border-soft);
+  background: var(--color-input-bg);
+  cursor: pointer;
+}
+
+.themeButton:hover {
+  border-color: var(--color-primary);
 }

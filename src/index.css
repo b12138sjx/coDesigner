@@ -1,16 +1,64 @@
 /* CoDesigner 全局样式 */
 :root {
-  --color-bg: #0f0f0f;
-  --color-surface: #1a1a1a;
-  --color-border: #2d2d2d;
-  --color-text: #e5e5e5;
-  --color-text-muted: #a3a3a3;
+  --color-bg: #0f1115;
+  --color-surface: #171a1f;
+  --color-border: #2a2f3a;
+  --color-text: #e5e7eb;
+  --color-text-muted: #9ca3af;
   --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;
-  --sidebar-width: 280px;
+  --color-primary-contrast: #dbeafe;
+  --color-sidebar-bg:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 46%),
+    linear-gradient(180deg, #1b1b1d 0%, #171719 100%);
+  --color-sidebar-border: #2c2f36;
+  --color-sidebar-border-soft: rgba(255, 255, 255, 0.1);
+  --color-sidebar-soft-bg: rgba(255, 255, 255, 0.03);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --color-input-bg: #12151c;
+  --color-canvas-bg: #101115;
+  --color-grid-line: rgba(255, 255, 255, 0.03);
+  --color-nav-active-bg: rgba(59, 130, 246, 0.2);
+  --color-nav-active-border: rgba(59, 130, 246, 0.35);
+  --color-nav-active-text: #eaf2ff;
+  --color-template-label: #ffffff;
+  --color-template-hint: #d1d5db;
+  --color-palette-group-title: #f3f4f6;
+  --color-tool-active-bg: rgba(59, 130, 246, 0.22);
+  --color-tool-active-text: #eaf2ff;
+  --sidebar-width: 296px;
   --toolbar-height: 48px;
   --layers-width: 240px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'SF Pro Text', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+:root[data-theme='light'] {
+  --color-bg: #f3f5f8;
+  --color-surface: #ffffff;
+  --color-border: #d9dee8;
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-contrast: #1e40af;
+  --color-sidebar-bg:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent 48%),
+    linear-gradient(180deg, #f9fbff 0%, #eef3fb 100%);
+  --color-sidebar-border: #d9e2f0;
+  --color-sidebar-border-soft: rgba(17, 24, 39, 0.13);
+  --color-sidebar-soft-bg: rgba(255, 255, 255, 0.86);
+  --color-sidebar-hover: rgba(37, 99, 235, 0.08);
+  --color-input-bg: #ffffff;
+  --color-canvas-bg: #f5f7fc;
+  --color-grid-line: rgba(17, 24, 39, 0.06);
+  --color-nav-active-bg: rgba(37, 99, 235, 0.16);
+  --color-nav-active-border: rgba(37, 99, 235, 0.28);
+  --color-nav-active-text: #111827;
+  --color-template-label: #111827;
+  --color-template-hint: #4b5563;
+  --color-palette-group-title: #111827;
+  --color-tool-active-bg: rgba(37, 99, 235, 0.14);
+  --color-tool-active-text: #111827;
 }
 
 *,
@@ -31,6 +79,7 @@ body {
   color: var(--color-text);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 /* tldraw 画布容器 */

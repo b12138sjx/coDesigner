@@ -1,10 +1,11 @@
 .page {
   padding: 24px 32px;
   height: 100%;
+  overflow: auto;
 }
 
 .header {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .header h1 {
@@ -24,4 +25,295 @@
   padding: 48px;
   text-align: center;
   color: var(--color-text-muted);
+}
+
+.createForm {
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 1.1fr 0.8fr 1.2fr 1.2fr 1.2fr auto;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.createForm input,
+.createForm select {
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  padding: 0 10px;
+  min-width: 0;
+}
+
+.createForm button {
+  border: none;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: #fff;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: 78px 1fr 216px;
+  gap: 14px;
+  align-items: start;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  padding: 14px;
+}
+
+.method {
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #1d4ed8;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 8px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.methodGET {
+  background: rgba(34, 197, 94, 0.18);
+  color: #15803d;
+}
+
+.methodPOST {
+  background: rgba(37, 99, 235, 0.18);
+  color: #1d4ed8;
+}
+
+.methodPUT,
+.methodPATCH {
+  background: rgba(245, 158, 11, 0.18);
+  color: #b45309;
+}
+
+.methodDELETE {
+  background: rgba(239, 68, 68, 0.18);
+  color: #b91c1c;
+}
+
+.content {
+  min-width: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.nameInput,
+.pathInput,
+.descInput,
+.ownerInput,
+.row select,
+.noteInputRow input,
+.fieldItem textarea,
+.acceptance textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.pathInput,
+.descInput {
+  margin-bottom: 8px;
+}
+
+.descInput,
+.fieldItem textarea,
+.acceptance textarea {
+  resize: vertical;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.fieldItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fieldItem span,
+.acceptance span {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+
+.acceptance {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.noteBlock {
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--color-input-bg);
+}
+
+.noteTitle {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin: 0 0 6px;
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.noteItem {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.noteMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.noteItem strong {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.noteRole {
+  font-size: 0.72rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 1px 6px;
+  color: var(--color-text-muted);
+}
+
+.noteTime {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.noteItem span {
+  font-size: 0.86rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.noteInputRow {
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  gap: 8px;
+}
+
+.noteInputRow select {
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  padding: 0 8px;
+}
+
+.noteInputRow button {
+  border: none;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--color-primary);
+  color: #fff;
+  cursor: pointer;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.status {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  text-align: center;
+}
+
+.ownerInput {
+  height: 34px;
+}
+
+.updatedAt {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.deleteBtn {
+  height: 34px;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+@media (max-width: 1680px) {
+  .createForm {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .card {
+    grid-template-columns: 1fr;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .meta {
+    border-top: 1px solid var(--color-border);
+    padding-top: 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  .createForm {
+    grid-template-columns: 1fr 1fr;
+  }
 }

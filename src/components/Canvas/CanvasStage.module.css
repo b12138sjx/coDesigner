@@ -11,5 +11,9 @@
 
 /* 覆盖 tldraw 主题以适配深色布局 */
 .stage .tl-container {
-  background: var(--color-bg) !important;
+  background:
+    linear-gradient(var(--color-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid-line) 1px, transparent 1px),
+    var(--color-canvas-bg) !important;
+  background-size: 28px 28px;
 }

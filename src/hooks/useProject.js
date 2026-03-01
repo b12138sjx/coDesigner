@@ -4,21 +4,42 @@ import { useProjectStore } from '@/stores/projectStore'
 
 export function useProject() {
   const navigate = useNavigate()
-  const { currentProjectId, projects, setCurrentProject, addProject } = useProjectStore()
+  const { currentProjectId, projects, setCurrentProject, createProject, addProject } =
+    useProjectStore()
+
+  const openProject = useCallback(
+    (projectId) => {
+      const targetId = projectId || currentProjectId
+      if (!targetId) {
+        navigate('/projects')
+        return
+      }
+      setCurrentProject(targetId)
+      navigate(`/project/${targetId}`)
+    },
+    [currentProjectId, navigate, setCurrentProject]
+  )
 
   const openDesign = useCallback(
     (projectId) => {
-      setCurrentProject(projectId)
-      navigate(projectId ? `/design/${projectId}` : '/design')
+      const targetId = projectId || currentProjectId
+      if (!targetId) {
+        navigate('/projects')
+        return
+      }
+      setCurrentProject(targetId)
+      navigate(`/design/${targetId}`)
     },
-    [navigate, setCurrentProject]
+    [currentProjectId, navigate, setCurrentProject]
   )
 
   return {
     currentProjectId,
     projects,
     setCurrentProject,
+    createProject,
     addProject,
+    openProject,
     openDesign,
   }
 }

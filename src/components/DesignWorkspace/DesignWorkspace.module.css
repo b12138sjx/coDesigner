@@ -12,7 +12,7 @@
 }
 
 .layers {
-  width: var(--layers-width);
+  width: 100%;
   flex-shrink: 0;
 }
 
@@ -20,9 +20,79 @@
   flex: 1;
   min-width: 0;
   position: relative;
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.08), transparent 56%);
 }
 
 .sidebar {
-  width: 280px;
+  width: 100%;
   flex-shrink: 0;
+}
+
+.panelShell {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  background: var(--color-surface);
+}
+
+.leftShell {
+  width: 300px;
+  border-right: 1px solid var(--color-border);
+}
+
+.rightShell {
+  width: 286px;
+  border-left: 1px solid var(--color-border);
+}
+
+.panelCollapsed {
+  width: 56px;
+}
+
+.collapseBtn {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.rightShell .collapseBtn {
+  left: 8px;
+  right: auto;
+}
+
+.collapseBtn:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
+.panelRail {
+  width: 100%;
+  padding-top: 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.panelRail button {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.panelRail button:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
 }

@@ -37,11 +37,14 @@ coDesigner/
 │   ├── layouts/
 │   │   └── MainLayout.jsx    # 主布局（侧栏 + 内容区）
 │   ├── pages/                # 页面
-│   │   ├── HomePage.jsx      # 首页
+│   │   ├── EntryPage.jsx     # 平台入口（注册/登录/跳过）
+│   │   ├── ProjectsPage.jsx  # 项目首页（选择/创建项目）
+│   │   ├── ProjectOverviewPage.jsx # 项目概览（进入模块前一层）
 │   │   ├── DesignPage.jsx    # 画布设计
 │   │   ├── DocumentsPage.jsx # 智能文档（占位）
 │   │   └── ApiPage.jsx       # 接口协同（占位）
 │   ├── stores/               # Zustand 状态
+│   │   ├── sessionStore.js   # 入口状态（登录/访客）
 │   │   ├── canvasStore.js    # 画布：工具、缩放、网格、撤销/重做栈
 │   │   ├── projectStore.js   # 项目列表与当前项目
 │   │   ├── documentStore.js  # 文档（按项目）
@@ -68,17 +71,17 @@ coDesigner/
 - **工具栏**：选择、绘制、矩形、椭圆、文本、箭头；撤销/重做按钮；网格显示开关。（注：工具与 tldraw 内部工具尚未完全联动，历史栈在 store 中，与 tldraw 的同步待接）
 - **属性面板**：当前工具、画布缩放滑块；选中元素后的属性编辑为占位说明。
 - **图层面板**：静态示例图层列表，文案提示“画布中的形状将同步到此列表”，与 tldraw 的实时同步待做。
-- **路由**：`/design`、`/design/:projectId`，设计页使用 `DesignWorkspace` 布局。
+- **路由**：`/design/:projectId`，设计页使用 `DesignWorkspace` 布局并强制项目上下文。
 
 ### 全局与导航
 
-- **首页**：产品介绍与入口卡片（画布设计、智能文档、接口协同）。
-- **侧边栏**：首页、画布设计、智能文档、接口协同导航。
-- **状态**：Zustand 管理项目、画布、文档、接口；`useProject`、`useCanvasHistory` 等 hooks 已就绪，便于后续接持久化与协同。
+- **入口流程**：`/entry` 支持注册/登录或跳过登录，再进入 `/projects` 选择项目。
+- **项目层导航**：进入 `/project/:projectId` 后再进入画布/文档/接口模块，侧边栏按当前项目动态展示模块入口。
+- **状态**：Zustand 管理入口状态、项目、画布、文档、接口；`useProject`、`useCanvasHistory` 等 hooks 已就绪，便于后续接持久化与协同。
 
 ### 文档与接口模块
 
-- **页面**：`/documents`、`/documents/:projectId` 与 `/api`、`/api/:projectId` 已存在，目前为占位文案与布局，文档编辑与接口列表未实现。
+- **页面**：`/documents/:projectId` 与 `/api/:projectId` 已存在，目前为占位文案与布局，文档编辑与接口列表未实现。
 
 ---
 

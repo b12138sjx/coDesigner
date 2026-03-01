@@ -1,0 +1,146 @@
+.panel {
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.header {
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.12), transparent);
+}
+
+.title {
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.searchInput {
+  margin-top: 10px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  padding: 0 10px;
+  width: 100%;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.section {
+  padding: 12px 10px 2px;
+}
+
+.sectionTitle {
+  color: var(--color-palette-group-title);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 0.68rem;
+  margin: 0 6px 8px;
+  opacity: 0.9;
+}
+
+.toolsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.toolBtn {
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  border-radius: 10px;
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.toolBtn span {
+  font-size: 1rem;
+}
+
+.toolBtn small {
+  font-size: 0.7rem;
+}
+
+.toolBtn:hover {
+  color: var(--color-text);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.toolBtnActive {
+  color: var(--color-tool-active-text);
+  border-color: rgba(59, 130, 246, 0.58);
+  background: var(--color-tool-active-bg);
+}
+
+.templateList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.templateCard {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-input-bg);
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  row-gap: 2px;
+}
+
+.templateCard:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.templateIcon {
+  grid-row: 1 / span 2;
+  font-size: 1rem;
+}
+
+.templateLabel {
+  font-size: 0.84rem;
+  color: var(--color-template-label);
+  font-weight: 600;
+}
+
+.templateHint {
+  color: var(--color-template-hint);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.hint {
+  margin: 10px 12px 14px;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.empty {
+  margin: 8px 12px 4px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
