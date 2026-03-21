@@ -31,6 +31,8 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* 右侧模式切换按钮已通过 extraCommands={[]} 隐藏，此处不再用 CSS 隐藏 ul */
+
 .wrapper :global(.w-md-editor-toolbar button) {
   color: var(--color-text);
 }
@@ -81,4 +83,30 @@
 .wrapper :global(.w-md-editor-preview u) {
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* 添加批注按钮 */
+.commentBtn {
+  position: absolute;
+  z-index: 100;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.commentBtn:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* 预览区相对定位，用于放置批注按钮 */
+.wrapper :global(.w-md-editor-preview) {
+  position: relative;
 }
