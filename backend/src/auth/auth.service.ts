@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -10,40 +11,20 @@ import { JwtService } from '@nestjs/jwt'
 import { Prisma, User, UserStatus } from '@prisma/client'
 import * as bcrypt from 'bcryptjs'
 import { PrismaService } from '../prisma/prisma.service'
+import { AccessTokenPayload, ClientMeta, RefreshTokenPayload } from './auth.types'
 import { LoginDto } from './dto/login.dto'
+import { LogoutDto } from './dto/logout.dto'
 import { RefreshTokenDto } from './dto/refresh-token.dto'
 import { RegisterDto } from './dto/register.dto'
-
-export interface ClientMeta {
-  userAgent: string | null
-  ipAddress: string | null
-}
-
-interface RefreshTokenPayload {
-  sub: string
-  sid: string
-  rid?: string
-  type: 'refresh'
-  iat?: number
-  exp?: number
-}
-
-interface AccessTokenPayload {
-  sub: string
-  username: string
-  type: 'access'
-  iat?: number
-  exp?: number
-}
 
 @Injectable()
 export class AuthService {
   private readonly saltRounds = 10
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(JwtService) private readonly jwtService: JwtService,
+    @Inject(ConfigService) private readonly configService: ConfigService
   ) {}
 
   async register(dto: RegisterDto, clientMeta: ClientMeta) {
@@ -186,6 +167,40 @@ export class AuthService {
     }
   }
 
+  async me(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    })
+
+    if (!user || user.deletedAt || user.status !== UserStatus.active) {
+      throw new UnauthorizedException('登录已失效，请重新登录')
+    }
+
+    return {
+      user: this.toUserProfile(user),
+    }
+  }
+
+  async logout(dto: LogoutDto) {
+    const refreshPayload = await this.tryVerifyRefreshTokenForLogout(dto.refreshToken)
+    if (!refreshPayload) {
+      return { success: true }
+    }
+
+    await this.prisma.userSession.updateMany({
+      where: {
+        id: refreshPayload.sid,
+        userId: refreshPayload.sub,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    })
+
+    return { success: true }
+  }
+
   private async createSessionAndIssueTokens(user: User, clientMeta: ClientMeta) {
     const placeholderExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
@@ -278,6 +293,25 @@ export class AuthService {
     }
   }
 
+  private async tryVerifyRefreshTokenForLogout(
+    token: string
+  ): Promise<RefreshTokenPayload | null> {
+    try {
+      const payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(token, {
+        secret: this.getRequiredEnv('JWT_REFRESH_SECRET'),
+        ignoreExpiration: true,
+      })
+
+      if (!payload?.sub || !payload?.sid || payload.type !== 'refresh') {
+        return null
+      }
+
+      return payload
+    } catch {
+      return null
+    }
+  }
+
   private getTokenExpiresAtIso(token: string): string {
     const payload = this.jwtService.decode(token)
 
@@ -297,10 +331,7 @@ export class AuthService {
   }
 
   private isUniqueViolation(error: unknown): boolean {
-    return (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    )
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
   }
 
   private hashRefreshToken(token: string): string {

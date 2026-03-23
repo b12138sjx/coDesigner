@@ -249,6 +249,16 @@
   border-color: var(--color-primary);
 }
 
+.resetButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.resetButton:disabled:hover {
+  color: var(--color-text-muted);
+  border-color: var(--color-sidebar-border-soft);
+}
+
 .themeButton {
   margin-left: auto;
   width: 30px;
