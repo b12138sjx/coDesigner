@@ -20,7 +20,8 @@ export function AppSidebar() {
   const getProjectById = useProjectStore((state) => state.getProjectById)
   const authMode = useSessionStore((state) => state.authMode)
   const user = useSessionStore((state) => state.user)
-  const resetEntry = useSessionStore((state) => state.resetEntry)
+  const authLoading = useSessionStore((state) => state.authLoading)
+  const logout = useSessionStore((state) => state.logout)
   const theme = useUiStore((state) => state.theme)
   const toggleTheme = useUiStore((state) => state.toggleTheme)
 
@@ -28,7 +29,7 @@ export function AppSidebar() {
   const routeProjectId = resolveProjectIdFromPath(location.pathname)
   const activeProjectId = routeProjectId || (inProjectContext ? currentProjectId : null)
   const activeProject = activeProjectId ? getProjectById(activeProjectId) : null
-  const userName = user?.name || '未登录'
+  const userName = user?.name || user?.username || '未登录'
   const userInitial = userName.slice(0, 1)
 
   const moduleItems = activeProjectId
@@ -39,8 +40,8 @@ export function AppSidebar() {
       ]
     : []
 
-  const handleResetEntry = () => {
-    resetEntry()
+  const handleResetEntry = async () => {
+    await logout()
     navigate('/entry', { replace: true })
   }
 
@@ -75,7 +76,7 @@ export function AppSidebar() {
         <span className={styles.userAvatar}>{userInitial}</span>
         {!collapsed && (
           <div className={styles.userMeta}>
-            <p>{authMode === 'guest' ? '访客模式' : '账号模式'}</p>
+            <p>{authMode === 'guest' ? '访客模式' : authMode === 'user' ? '账号模式' : '未登录'}</p>
             <strong>{userName}</strong>
           </div>
         )}
@@ -158,8 +159,19 @@ export function AppSidebar() {
         </div>
       </nav>
 
-      <button type="button" className={styles.resetButton} onClick={handleResetEntry}>
-        {collapsed ? '⎋' : '退出到入口页'}
+      <button
+        type="button"
+        className={styles.resetButton}
+        onClick={handleResetEntry}
+        disabled={authLoading}
+      >
+        {collapsed
+          ? '⎋'
+          : authLoading
+            ? '退出中...'
+            : authMode === 'user'
+              ? '退出登录'
+              : '返回入口页'}
       </button>
     </aside>
   )

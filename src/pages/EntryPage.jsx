@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useSessionStore } from '@/stores/sessionStore'
 import styles from './EntryPage.module.css'
 
 export function EntryPage() {
   const navigate = useNavigate()
+  const hasEntered = useSessionStore((state) => state.hasEntered)
+  const authReady = useSessionStore((state) => state.authReady)
+  const authLoading = useSessionStore((state) => state.authLoading)
   const login = useSessionStore((state) => state.login)
   const register = useSessionStore((state) => state.register)
   const enterAsGuest = useSessionStore((state) => state.enterAsGuest)
@@ -15,12 +18,30 @@ export function EntryPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  const handleAuthEnter = (event) => {
+  if (!authReady) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.panel}>
+          <header className={styles.header}>
+            <h1>正在恢复会话</h1>
+            <p>稍等一下，我们正在确认当前登录状态。</p>
+          </header>
+        </div>
+      </div>
+    )
+  }
+
+  if (authReady && hasEntered) {
+    return <Navigate to="/projects" replace />
+  }
+
+  const handleAuthEnter = async (event) => {
     event.preventDefault()
+
     const result =
       mode === 'login'
-        ? login({ username, password })
-        : register({ username, password, confirmPassword })
+        ? await login({ username, password })
+        : await register({ username, password, confirmPassword })
 
     if (!result.ok) return
     navigate('/projects', { replace: true })
@@ -33,6 +54,7 @@ export function EntryPage() {
   }
 
   const switchMode = (nextMode) => {
+    if (authLoading) return
     setMode(nextMode)
     clearAuthError()
   }
@@ -50,6 +72,7 @@ export function EntryPage() {
             type="button"
             onClick={() => switchMode('login')}
             className={mode === 'login' ? styles.modeActive : styles.modeButton}
+            disabled={authLoading}
           >
             登录
           </button>
@@ -57,6 +80,7 @@ export function EntryPage() {
             type="button"
             onClick={() => switchMode('register')}
             className={mode === 'register' ? styles.modeActive : styles.modeButton}
+            disabled={authLoading}
           >
             注册
           </button>
@@ -71,6 +95,7 @@ export function EntryPage() {
               onChange={(event) => setUsername(event.target.value)}
               placeholder="请输入账号"
               autoComplete="username"
+              disabled={authLoading}
             />
           </label>
 
@@ -82,6 +107,7 @@ export function EntryPage() {
               onChange={(event) => setPassword(event.target.value)}
               placeholder="请输入密码（至少 6 位）"
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              disabled={authLoading}
             />
           </label>
 
@@ -94,6 +120,7 @@ export function EntryPage() {
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 placeholder="请再次输入密码"
                 autoComplete="new-password"
+                disabled={authLoading}
               />
             </label>
           )}
@@ -101,10 +128,15 @@ export function EntryPage() {
           {authError && <p className={styles.errorText}>{authError}</p>}
 
           <div className={styles.actions}>
-            <button type="submit" className={styles.primaryButton}>
-              {mode === 'login' ? '登录并进入' : '注册并进入'}
+            <button type="submit" className={styles.primaryButton} disabled={authLoading}>
+              {authLoading ? '提交中...' : mode === 'login' ? '登录并进入' : '注册并进入'}
             </button>
-            <button type="button" className={styles.secondaryButton} onClick={handleGuestEnter}>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={handleGuestEnter}
+              disabled={authLoading}
+            >
               跳过登录
             </button>
           </div>

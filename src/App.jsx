@@ -10,14 +10,32 @@ import { ApiPage } from './pages/ApiPage'
 import { useProjectStore } from './stores/projectStore'
 import { useSessionStore } from './stores/sessionStore'
 import { useUiStore } from './stores/uiStore'
+import styles from './App.module.css'
+
+function AuthLoadingScreen() {
+  return (
+    <div className={styles.loadingScreen}>
+      <div className={styles.loadingCard}>
+        <strong>正在恢复会话</strong>
+        <p>稍等一下，我们正在同步当前登录状态。</p>
+      </div>
+    </div>
+  )
+}
 
 function EntryRedirect() {
+  const authReady = useSessionStore((state) => state.authReady)
   const hasEntered = useSessionStore((state) => state.hasEntered)
+
+  if (!authReady) return <AuthLoadingScreen />
   return <Navigate to={hasEntered ? '/projects' : '/entry'} replace />
 }
 
 function RequireEntryLayout() {
+  const authReady = useSessionStore((state) => state.authReady)
   const hasEntered = useSessionStore((state) => state.hasEntered)
+
+  if (!authReady) return <AuthLoadingScreen />
   if (!hasEntered) return <Navigate to="/entry" replace />
   return <MainLayout />
 }
@@ -41,10 +59,15 @@ function ProjectRouteGuard({ children }) {
 
 function App() {
   const theme = useUiStore((state) => state.theme)
+  const initializeAuth = useSessionStore((state) => state.initializeAuth)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    void initializeAuth()
+  }, [initializeAuth])
 
   return (
     <Routes>

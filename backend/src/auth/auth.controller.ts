@@ -1,13 +1,16 @@
-﻿import { Body, Controller, Post, Req } from '@nestjs/common'
+import { Body, Controller, Get, Inject, Post, Req, UseGuards } from '@nestjs/common'
 import { Request } from 'express'
-import { AuthService, ClientMeta } from './auth.service'
+import { AccessTokenGuard } from './access-token.guard'
+import { AuthenticatedRequest, ClientMeta } from './auth.types'
+import { AuthService } from './auth.service'
 import { LoginDto } from './dto/login.dto'
+import { LogoutDto } from './dto/logout.dto'
 import { RefreshTokenDto } from './dto/refresh-token.dto'
 import { RegisterDto } from './dto/register.dto'
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   @Post('register')
   register(@Body() dto: RegisterDto, @Req() req: Request) {
@@ -22,6 +25,17 @@ export class AuthController {
   @Post('refresh')
   refresh(@Body() dto: RefreshTokenDto, @Req() req: Request) {
     return this.authService.refresh(dto, this.toClientMeta(req))
+  }
+
+  @UseGuards(AccessTokenGuard)
+  @Get('me')
+  me(@Req() req: AuthenticatedRequest) {
+    return this.authService.me(req.authUser?.sub || '')
+  }
+
+  @Post('logout')
+  logout(@Body() dto: LogoutDto) {
+    return this.authService.logout(dto)
   }
 
   private toClientMeta(req: Request): ClientMeta {
