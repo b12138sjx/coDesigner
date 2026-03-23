@@ -12,12 +12,15 @@ import { useSessionStore } from './stores/sessionStore'
 import { useUiStore } from './stores/uiStore'
 import styles from './App.module.css'
 
-function AuthLoadingScreen() {
+function LoadingScreen({
+  title = '正在恢复会话',
+  description = '稍等一下，我们正在同步当前登录状态。',
+}) {
   return (
     <div className={styles.loadingScreen}>
       <div className={styles.loadingCard}>
-        <strong>正在恢复会话</strong>
-        <p>稍等一下，我们正在同步当前登录状态。</p>
+        <strong>{title}</strong>
+        <p>{description}</p>
       </div>
     </div>
   )
@@ -27,7 +30,7 @@ function EntryRedirect() {
   const authReady = useSessionStore((state) => state.authReady)
   const hasEntered = useSessionStore((state) => state.hasEntered)
 
-  if (!authReady) return <AuthLoadingScreen />
+  if (!authReady) return <LoadingScreen />
   return <Navigate to={hasEntered ? '/projects' : '/entry'} replace />
 }
 
@@ -35,13 +38,16 @@ function RequireEntryLayout() {
   const authReady = useSessionStore((state) => state.authReady)
   const hasEntered = useSessionStore((state) => state.hasEntered)
 
-  if (!authReady) return <AuthLoadingScreen />
+  if (!authReady) return <LoadingScreen />
   if (!hasEntered) return <Navigate to="/entry" replace />
   return <MainLayout />
 }
 
 function ProjectRouteGuard({ children }) {
   const { projectId } = useParams()
+  const authReady = useSessionStore((state) => state.authReady)
+  const projectsReady = useProjectStore((state) => state.projectsReady)
+  const projectsLoading = useProjectStore((state) => state.projectsLoading)
   const hasProject = useProjectStore((state) =>
     state.projects.some((project) => project.id === projectId)
   )
@@ -53,6 +59,15 @@ function ProjectRouteGuard({ children }) {
     }
   }, [hasProject, projectId, setCurrentProject])
 
+  if (!authReady || projectsLoading || !projectsReady) {
+    return (
+      <LoadingScreen
+        title="正在同步项目"
+        description="稍等一下，我们正在校验当前账号可访问的项目。"
+      />
+    )
+  }
+
   if (!projectId || !hasProject) return <Navigate to="/projects" replace />
   return children
 }
@@ -60,6 +75,10 @@ function ProjectRouteGuard({ children }) {
 function App() {
   const theme = useUiStore((state) => state.theme)
   const initializeAuth = useSessionStore((state) => state.initializeAuth)
+  const authReady = useSessionStore((state) => state.authReady)
+  const authMode = useSessionStore((state) => state.authMode)
+  const userId = useSessionStore((state) => state.user?.id || '')
+  const syncWithSession = useProjectStore((state) => state.syncWithSession)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -68,6 +87,11 @@ function App() {
   useEffect(() => {
     void initializeAuth()
   }, [initializeAuth])
+
+  useEffect(() => {
+    if (!authReady) return
+    void syncWithSession()
+  }, [authMode, authReady, syncWithSession, userId])
 
   return (
     <Routes>

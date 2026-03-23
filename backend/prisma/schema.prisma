@@ -24,9 +24,40 @@ model User {
   deletedAt          DateTime?       @map("deleted_at") @db.Timestamptz(6)
   credential         UserCredential?
   sessions           UserSession[]
+  ownedProjects      Project[]       @relation("ProjectOwner")
 
   @@map("users")
   @@index([username])
+}
+
+model Project {
+  id          String         @id @default(uuid()) @db.Uuid
+  projectKey  String         @map("project_key") @db.VarChar(64)
+  ownerUserId String         @map("owner_user_id") @db.Uuid
+  name        String         @db.VarChar(120)
+  brief       String         @default("")
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(6)
+  owner       User           @relation("ProjectOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  canvas      ProjectCanvas?
+
+  @@map("projects")
+  @@unique([ownerUserId, projectKey], map: "projects_owner_user_id_project_key_key")
+  @@index([ownerUserId])
+  @@index([ownerUserId, updatedAt])
+}
+
+model ProjectCanvas {
+  projectId              String   @id @map("project_id") @db.Uuid
+  snapshot               Json     @db.JsonB
+  snapshotSchemaVersion  Int      @default(1) @map("snapshot_schema_version")
+  revision               Int      @default(0)
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  project                Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_canvases")
 }
 
 model UserCredential {
