@@ -53,6 +53,8 @@ export function AnnotationsPanel({
     if (pendingQuote !== undefined || pendingSelection !== undefined) {
       const selectionStart =
         typeof pendingSelection?.start === 'number' ? pendingSelection.start : null
+      const selectionEnd =
+        typeof pendingSelection?.end === 'number' ? pendingSelection.end : null
       setFormQuote(typeof pendingQuote === 'string' ? pendingQuote : '')
       setFormAnchorOffset(selectionStart)
       setFormLine(
@@ -60,6 +62,9 @@ export function AnnotationsPanel({
           ? String(getLineNumberByOffset(content, selectionStart) || '')
           : ''
       )
+      if (selectionEnd === null) {
+        setFormAnchorOffset(selectionStart)
+      }
       setIsAdding(true)
     }
   }, [content, pendingQuote, pendingSelection])
@@ -96,6 +101,8 @@ export function AnnotationsPanel({
       quote: formQuote.trim(),
       lineStart: normalizedLine,
       anchorOffset: normalizedOffset,
+      selectionTo:
+        typeof pendingSelection?.end === 'number' ? pendingSelection.end : null,
     })
     addComment(projectId, comment)
     setFormText('')
@@ -187,7 +194,7 @@ export function AnnotationsPanel({
 
       {!collapsed && <div className={styles.list}>
         {comments.length === 0 && !isAdding && (
-          <p className={styles.empty}>暂无注释，点击「添加」或选中文字后在编辑器工具栏点击评论图标添加。</p>
+          <p className={styles.empty}>暂无注释，点击「添加」或选中文字后在编辑器工具栏点击「注释」添加。</p>
         )}
         {comments.map((c) => (
             <div

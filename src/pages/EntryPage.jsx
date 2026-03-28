@@ -1,9 +1,21 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useSessionStore } from '@/stores/sessionStore'
 import styles from './EntryPage.module.css'
 
+function resolveAfterEntryTarget(locationState) {
+  const from = locationState?.from
+  const pathname = from?.pathname || ''
+
+  if (!pathname || pathname === '/' || pathname === '/entry') {
+    return '/projects'
+  }
+
+  return `${pathname}${from?.search || ''}${from?.hash || ''}`
+}
+
 export function EntryPage() {
+  const location = useLocation()
   const navigate = useNavigate()
   const hasEntered = useSessionStore((state) => state.hasEntered)
   const authReady = useSessionStore((state) => state.authReady)
@@ -17,6 +29,7 @@ export function EntryPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const afterEntryTarget = resolveAfterEntryTarget(location.state)
 
   if (!authReady) {
     return (
@@ -32,7 +45,7 @@ export function EntryPage() {
   }
 
   if (authReady && hasEntered) {
-    return <Navigate to="/projects" replace />
+    return <Navigate to={afterEntryTarget} replace />
   }
 
   const handleAuthEnter = async (event) => {
@@ -44,13 +57,13 @@ export function EntryPage() {
         : await register({ username, password, confirmPassword })
 
     if (!result.ok) return
-    navigate('/projects', { replace: true })
+    navigate(afterEntryTarget, { replace: true })
   }
 
   const handleGuestEnter = () => {
     clearAuthError()
     enterAsGuest()
-    navigate('/projects', { replace: true })
+    navigate(afterEntryTarget, { replace: true })
   }
 
   const switchMode = (nextMode) => {

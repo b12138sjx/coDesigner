@@ -1,0 +1,61 @@
+.button {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(59, 130, 246, 0.06), transparent 72%),
+    var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(59, 130, 246, 0.36);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.14);
+  color: var(--color-primary);
+}
+
+.buttonOpen {
+  justify-content: space-between;
+  border-color: rgba(59, 130, 246, 0.28);
+  background:
+    linear-gradient(180deg, rgba(59, 130, 246, 0.12), transparent 72%),
+    var(--color-surface);
+}
+
+.buttonCompact {
+  width: 56px;
+  min-width: 56px;
+  padding: 0;
+  border-radius: 20px;
+  align-self: flex-end;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.14);
+  color: var(--color-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}

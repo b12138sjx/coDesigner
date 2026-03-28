@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Routes, Route, Navigate, useParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { MainLayout } from './layouts/MainLayout'
 import { EntryPage } from './pages/EntryPage'
 import { ProjectsPage } from './pages/ProjectsPage'
@@ -35,23 +35,28 @@ function EntryRedirect() {
 }
 
 function RequireEntryLayout() {
+  const location = useLocation()
   const authReady = useSessionStore((state) => state.authReady)
   const hasEntered = useSessionStore((state) => state.hasEntered)
 
   if (!authReady) return <LoadingScreen />
-  if (!hasEntered) return <Navigate to="/entry" replace />
+  if (!hasEntered) return <Navigate to="/entry" replace state={{ from: location }} />
   return <MainLayout />
 }
 
 function ProjectRouteGuard({ children }) {
   const { projectId } = useParams()
+  const location = useLocation()
   const authReady = useSessionStore((state) => state.authReady)
+  const authMode = useSessionStore((state) => state.authMode)
+  const projectMode = useProjectStore((state) => state.mode)
   const projectsReady = useProjectStore((state) => state.projectsReady)
   const projectsLoading = useProjectStore((state) => state.projectsLoading)
   const hasProject = useProjectStore((state) =>
     state.projects.some((project) => project.id === projectId)
   )
   const setCurrentProject = useProjectStore((state) => state.setCurrentProject)
+  const waitingRemoteProjects = authMode === 'user' && projectMode !== 'remote'
 
   useEffect(() => {
     if (projectId && hasProject) {
@@ -59,7 +64,7 @@ function ProjectRouteGuard({ children }) {
     }
   }, [hasProject, projectId, setCurrentProject])
 
-  if (!authReady || projectsLoading || !projectsReady) {
+  if (!authReady || projectsLoading || !projectsReady || waitingRemoteProjects) {
     return (
       <LoadingScreen
         title="正在同步项目"
@@ -68,7 +73,9 @@ function ProjectRouteGuard({ children }) {
     )
   }
 
-  if (!projectId || !hasProject) return <Navigate to="/projects" replace />
+  if (!projectId || !hasProject) {
+    return <Navigate to="/projects" replace state={{ from: location }} />
+  }
   return children
 }
 

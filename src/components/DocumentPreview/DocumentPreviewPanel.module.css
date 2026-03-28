@@ -1,0 +1,145 @@
+.panel {
+  width: 340px;
+  min-width: 300px;
+  background:
+    linear-gradient(180deg, rgba(59, 130, 246, 0.06), transparent 22%),
+    var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.kicker {
+  margin: 0 0 6px;
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.meta {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+}
+
+.preview {
+  min-height: 100%;
+  padding: 22px 24px 28px;
+  border-radius: 18px;
+  background: var(--color-bg);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.preview :global(p) {
+  margin: 0 0 14px;
+  line-height: 1.8;
+}
+
+.preview :global(h1),
+.preview :global(h2),
+.preview :global(h3) {
+  margin: 0 0 12px;
+  line-height: 1.28;
+}
+
+.preview :global(h1) {
+  font-size: 1.9rem;
+}
+
+.preview :global(h2) {
+  font-size: 1.36rem;
+}
+
+.preview :global(h3) {
+  font-size: 1.08rem;
+}
+
+.preview :global(ul),
+.preview :global(ol) {
+  margin: 0 0 16px 22px;
+}
+
+.preview :global(li) {
+  margin-bottom: 8px;
+}
+
+.preview :global(blockquote) {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--color-primary);
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 0 14px 14px 0;
+}
+
+.preview :global(code) {
+  background: rgba(148, 163, 184, 0.18);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 0.9em;
+}
+
+.preview :global(mark) {
+  background: rgba(250, 204, 21, 0.28);
+  color: inherit;
+  padding: 0 3px;
+  border-radius: 4px;
+}
+
+.empty {
+  padding: 22px 20px;
+  border-radius: 18px;
+  background: var(--color-bg);
+  border: 1px dashed rgba(148, 163, 184, 0.26);
+}
+
+.empty strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.92rem;
+}
+
+.empty p {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  font-size: 0.86rem;
+}
+
+.footer {
+  padding: 12px 18px 14px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 1180px) {
+  .panel {
+    width: auto;
+    min-width: 0;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+}

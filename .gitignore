@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+.playwright-cli/
+ai-api/.next/
+ai-api/node_modules/
+ai-api/.env
 
 # Editor directories and files
 .vscode/*
