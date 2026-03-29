@@ -1,12 +1,11 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import MDEditor, { commands } from '@uiw/react-md-editor'
-import MarkdownPreview from '@uiw/react-markdown-preview'
-import rehypeRaw from 'rehype-raw'
-import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useProjectStore } from '@/stores/projectStore'
-import { useDocumentStore } from '@/stores/documentStore'
-import { CommentSidebar } from '@/components/CommentSidebar/CommentSidebar'
+import { useDocumentStore, createComment } from '@/stores/documentStore'
+import { useDocumentAiStore, createAiMessage, createEmptyAiSession } from '@/stores/documentAiStore'
+import { DocumentEditor } from '@/components/DocumentEditor/DocumentEditor'
+import { DocumentAiPanel } from '@/components/DocumentAI/DocumentAiPanel'
+import { DocumentPreviewPanel } from '@/components/DocumentPreview/DocumentPreviewPanel'
 import {
   downloadJsonFile,
   downloadTextFile,
@@ -14,81 +13,22 @@ import {
   formatDateStamp,
   toSafeFileName,
 } from '@/utils/fileExport'
+import { aiApi } from '@/utils/aiApi'
+import { truncateText } from '@/utils/documentContent'
 import styles from './DocumentsPage.module.css'
 
-const EMPTY_DOC = { content: '', comments: [] }
+const EMPTY_DOC = { content: '<p></p>', contentFormat: 'html', comments: [] }
 
-// 扩展 schema：允许 <u>、<mark> 用于下划线与高亮
-const schema = {
-  ...defaultSchema,
-  tagNames: [...(defaultSchema.tagNames || []), 'u', 'mark'],
-  attributes: { ...defaultSchema.attributes, u: [], mark: [] },
+const ACTION_LABELS = {
+  polish: '润色',
+  concise: '改写为更简洁版本',
+  expand: '扩写',
+  summarize: '总结',
+  explain: '解释',
 }
-
-// 下划线命令
-const underlineCommand = {
-  name: 'underline',
-  keyCommand: 'underline',
-  buttonProps: { 'aria-label': '下划线', title: '下划线' },
-  icon: (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M6 4v6a6 6 0 0012 0V4M4 20h16" />
-    </svg>
-  ),
-  execute: (state, api) => {
-    const { selectedText } = state
-    const prefix = '<u>'
-    const suffix = '</u>'
-    if (selectedText && selectedText.startsWith(prefix) && selectedText.endsWith(suffix)) {
-      api.replaceSelection(selectedText.slice(prefix.length, -suffix.length))
-    } else {
-      api.replaceSelection(prefix + (selectedText || '') + suffix)
-    }
-  },
-}
-
-// 高亮命令
-const highlightCommand = {
-  name: 'highlight',
-  keyCommand: 'highlight',
-  buttonProps: { 'aria-label': '高亮', title: '高亮' },
-  icon: (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M15.24 2.53l-.52-.52A2.5 2.5 0 0012 1h-1.5A2.5 2.5 0 008 3.5V4H5.5A2.5 2.5 0 003 6.5v12A2.5 2.5 0 005.5 21h13a2.5 2.5 0 002.5-2.5v-12A2.5 2.5 0 0018.5 4H16v-.5A2.5 2.5 0 0013.5 1H12a2.5 2.5 0 00-1.76.73l-.52.52a.5.5 0 01-.35.15H8.5a.5.5 0 00-.5.5v1a.5.5 0 01-.5.5.5.5 0 000 1 .5.5 0 01.5.5v1a.5.5 0 00.5.5h2.59a.5.5 0 01.35.15l.52.52a2.5 2.5 0 001.76.73h1a2.5 2.5 0 002.5-2.5v-1a.5.5 0 01.5-.5.5.5 0 000-1 .5.5 0 01-.5-.5v-1a.5.5 0 00-.5-.5h-2.59a.5.5 0 01-.35-.15z" />
-    </svg>
-  ),
-  execute: (state, api) => {
-    const { selectedText } = state
-    const prefix = '<mark>'
-    const suffix = '</mark>'
-    if (selectedText && selectedText.startsWith(prefix) && selectedText.endsWith(suffix)) {
-      api.replaceSelection(selectedText.slice(prefix.length, -suffix.length))
-    } else {
-      api.replaceSelection(prefix + (selectedText || '') + suffix)
-    }
-  },
-}
-
-// 编辑器工具栏命令
-const editorCommands = [
-  commands.bold,
-  commands.italic,
-  commands.strikethrough,
-  underlineCommand,
-  highlightCommand,
-  commands.divider,
-  commands.title,
-  commands.divider,
-  commands.link,
-  commands.quote,
-  commands.code,
-  commands.divider,
-  commands.unorderedListCommand,
-  commands.orderedListCommand,
-  commands.checkedListCommand,
-]
 
 export function DocumentsPage() {
+  const navigate = useNavigate()
   const { projectId } = useParams()
   const project = useProjectStore((state) => state.getProjectById(projectId))
   const documents = useDocumentStore((state) => state.documents)
@@ -98,8 +38,16 @@ export function DocumentsPage() {
   )
   const setContent = useDocumentStore((state) => state.setContent)
   const setDocByProject = useDocumentStore((state) => state.setDocByProject)
+  const addComment = useDocumentStore((state) => state.addComment)
 
-  const [pendingComment, setPendingComment] = useState(null)
+  const aiSessions = useDocumentAiStore((state) => state.sessions)
+  const ensureAiSession = useDocumentAiStore((state) => state.ensureSession)
+  const setDraft = useDocumentAiStore((state) => state.setDraft)
+  const pushMessage = useDocumentAiStore((state) => state.pushMessage)
+  const setRequestState = useDocumentAiStore((state) => state.setRequestState)
+  const setSelectionContext = useDocumentAiStore((state) => state.setSelectionContext)
+  const setResultPreview = useDocumentAiStore((state) => state.setResultPreview)
+
   const [fileTip, setFileTip] = useState('')
   const [showCommentBtn, setShowCommentBtn] = useState(false)
   const [commentBtnPos, setCommentBtnPos] = useState({ top: 0, left: 0 })
@@ -110,12 +58,23 @@ export function DocumentsPage() {
   const containerRef = useRef(null)
   const tipTimerRef = useRef(null)
 
-  const content = doc?.content ?? ''
+  const content = doc?.content ?? '<p></p>'
+  const contentFormat = doc?.contentFormat ?? 'html'
   const comments = doc?.comments || []
+  const aiSession = projectId && aiSessions[projectId]
+    ? aiSessions[projectId]
+    : createEmptyAiSession()
+
+  useEffect(() => {
+    if (!projectId) return
+    ensureAiSession(projectId)
+  }, [ensureAiSession, projectId])
 
   const handleChange = useCallback(
     (val) => {
-      if (projectId) setContent(projectId, val ?? '')
+      if (projectId) {
+        setContent(projectId, val ?? '<p></p>', 'html')
+      }
     },
     [projectId, setContent]
   )
@@ -137,9 +96,13 @@ export function DocumentsPage() {
 
   const handleSave = useCallback(() => {
     if (!projectId) return
-    setDocByProject(projectId, { content, comments })
+    setDocByProject(projectId, {
+      content,
+      contentFormat: 'html',
+      comments,
+    })
     showTip('文档已保存')
-  }, [content, comments, projectId, setDocByProject, showTip])
+  }, [comments, content, projectId, setDocByProject, showTip])
 
   const handleExport = useCallback(() => {
     const payload = {
@@ -148,292 +111,221 @@ export function DocumentsPage() {
       projectName: project?.name || null,
       exportedAt: new Date().toISOString(),
       content,
+      contentFormat,
       comments,
     }
     downloadJsonFile(payload, `${baseName}_doc_${formatDateStamp()}.json`)
-    downloadTextFile(content || '', `${baseName}_doc_${formatDateStamp()}.md`, 'text/markdown;charset=utf-8')
-    showTip('已导出 JSON + Markdown')
-  }, [baseName, content, comments, project?.name, projectId, showTip])
+    downloadTextFile(content || '', `${baseName}_doc_${formatDateStamp()}.html`, 'text/html;charset=utf-8')
+    showTip('已导出 JSON + HTML')
+  }, [baseName, comments, content, contentFormat, project?.name, projectId, showTip])
 
   const handleSaveAs = useCallback(() => {
     const suggested = `${baseName}_doc_${formatDateStamp()}`
     const inputName = window.prompt('请输入另存为文档名', suggested)
     if (inputName === null) return
-    const fileName = ensureExt(toSafeFileName(inputName, suggested), '.md')
-    downloadTextFile(content || '', fileName, 'text/markdown;charset=utf-8')
-    showTip('已另存为 Markdown')
+    const fileName = ensureExt(toSafeFileName(inputName, suggested), '.html')
+    downloadTextFile(content || '', fileName, 'text/html;charset=utf-8')
+    showTip('已另存为 HTML')
   }, [baseName, content, showTip])
 
-  // 预览区选中文字添加批注
-  const handlePreviewMouseUp = useCallback(
-    (e) => {
-      if (previewCollapsed) return
-
-      const previewEl = previewRef.current
-      if (!previewEl) return
-
-      const selection = window.getSelection()
-      const selectedText = selection.toString().trim()
-
-      if (selectedText) {
-        const range = selection.getRangeAt(0)
-        const rect = range.getBoundingClientRect()
-        const previewRect = previewEl.getBoundingClientRect()
-
-        setPendingComment({ quote: selectedText })
-        setCommentBtnPos({
-          top: rect.bottom - previewRect.top + previewEl.scrollTop + 4,
-          left: rect.left - previewRect.left + rect.width / 2 - 30,
-        })
-        setShowCommentBtn(true)
-      } else {
-        setShowCommentBtn(false)
-      }
-    },
-    [previewCollapsed]
-  )
-
-  const handleAddCommentClick = useCallback(() => {
-    setShowCommentBtn(false)
-    window.getSelection().removeAllRanges()
-  }, [])
-
-  const clearPending = useCallback(() => {
-    setPendingComment(null)
-    setShowCommentBtn(false)
-  }, [])
-
-  // 定位到批注位置（高亮预览区）
-  const handleLocateComment = useCallback(
-    (comment) => {
-      // 展开预览区
-      if (previewCollapsed) {
-        setPreviewCollapsed(false)
-        setTimeout(() => doLocate(comment), 300)
-      } else {
-        doLocate(comment)
-      }
-
-      function doLocate(comment) {
-        const previewEl = previewRef.current
-        if (!previewEl || !comment.quote) return
-
-        const walker = document.createTreeWalker(
-          previewEl,
-          NodeFilter.SHOW_TEXT,
-          null,
-          false
-        )
-        let node
-        while ((node = walker.nextNode())) {
-          const idx = node.textContent.indexOf(comment.quote)
-          if (idx !== -1) {
-            const range = document.createRange()
-            range.setStart(node, idx)
-            range.setEnd(node, idx + comment.quote.length)
-
-            // 滚动到可见
-            const rect = range.getBoundingClientRect()
-            const previewRect = previewEl.getBoundingClientRect()
-            if (rect.top < previewRect.top || rect.bottom > previewRect.bottom) {
-              previewEl.scrollTop += rect.top - previewRect.top - 100
-            }
-
-            // 高亮效果
-            const highlight = document.createElement('span')
-            highlight.className = 'comment-highlight'
-            highlight.style.background = 'rgba(59, 130, 246, 0.2)'
-            highlight.style.borderRadius = '2px'
-            highlight.style.transition = 'background 0.3s'
-            try {
-              range.surroundContents(highlight)
-              setTimeout(() => {
-                highlight.style.background = 'transparent'
-                setTimeout(() => {
-                  const parent = highlight.parentNode
-                  if (parent) {
-                    while (highlight.firstChild) {
-                      parent.insertBefore(highlight.firstChild, highlight)
-                    }
-                    parent.removeChild(highlight)
-                  }
-                }, 300)
-              }, 1500)
-            } catch (e) {
-              // 如果 range 跨越多个元素，忽略错误
-            }
-            return
-          }
-        }
-      }
-    },
-    [previewCollapsed]
-  )
-
-  // 计算连接线
-  const [connections, setConnections] = useState([])
-
-  const updateConnections = useCallback(() => {
-    if (!previewRef.current || !containerRef.current || previewCollapsed) {
-      setConnections([])
+  const handleBack = useCallback(() => {
+    if (projectId) {
+      navigate(`/project/${projectId}`)
       return
     }
+    navigate('/projects')
+  }, [navigate, projectId])
 
-    const previewEl = previewRef.current
-    const containerEl = containerRef.current
-    const previewRect = previewEl.getBoundingClientRect()
-    const containerRect = containerEl.getBoundingClientRect()
+  const handleApplyAiResult = useCallback(
+    async (mode) => {
+      const preview = aiSession.resultPreview
+      if (!preview?.resultText) return
 
-    const newConnections = comments.map((c) => {
-      if (!c.quote) return null
+      if (mode === 'copy') {
+        try {
+          await navigator.clipboard.writeText(preview.resultText)
+          showTip('AI 结果已复制')
+        } catch {
+          showTip('复制失败，请重试')
+        }
+        return
+      }
 
-      // 在预览区查找对应文本
-      const walker = document.createTreeWalker(
-        previewEl,
-        NodeFilter.SHOW_TEXT,
-        null,
-        false
+      const applied = editorRef.current?.applyAiResult(
+        mode,
+        preview.resultText,
+        aiSession.lastSelection
       )
-      let node
-      let previewY = 0
 
-      outer: while ((node = walker.nextNode())) {
-        const idx = node.textContent.indexOf(c.quote)
-        if (idx !== -1) {
-          const range = document.createRange()
-          range.setStart(node, idx)
-          range.setEnd(node, Math.min(idx + c.quote.length, node.textContent.length))
-          const rect = range.getBoundingClientRect()
-          previewY = rect.top - containerRect.top + rect.height / 2
-          break outer
+      if (applied?.ok) {
+        showTip(
+          mode === 'replace-selection'
+            ? 'AI 结果已替换到选区'
+            : 'AI 结果已插入到文档'
+        )
+        if (projectId) {
+          setResultPreview(projectId, null)
         }
+        return
       }
 
-      // 查找批注卡片
-      const cardEl = containerEl.querySelector(`[data-comment-id="${c.id}"]`)
-      if (!cardEl) return null
-
-      const cardRect = cardEl.getBoundingClientRect()
-      const cardY = cardRect.top - containerRect.top + cardRect.height / 2
-
-      return {
-        id: c.id,
-        x1: previewRect.width,
-        y1: previewY,
-        x2: previewRect.width + 2,
-        y2: cardY,
+      if (applied?.reason === 'selection-changed') {
+        showTip('原始选区已变化，请重新选择文本后再应用')
       }
-    }).filter(Boolean)
+    },
+    [aiSession.lastSelection, aiSession.resultPreview, projectId, setResultPreview, showTip]
+  )
 
-    setConnections(newConnections)
-  }, [comments, previewCollapsed])
+  const handleSubmitComment = useCallback(
+    ({ quote, selection, text }) => {
+      if (!projectId || !text?.trim()) return
 
-  // 监听滚动更新连接线
-  useEffect(() => {
-    if (previewCollapsed) return
-
-    const previewEl = previewRef.current
-    if (!previewEl) return
-
-    const handleScroll = () => {
-      requestAnimationFrame(updateConnections)
-    }
-
-    previewEl.addEventListener('scroll', handleScroll)
-    window.addEventListener('resize', handleScroll)
-
-    setTimeout(updateConnections, 100)
-
-    return () => {
-      previewEl.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
-    }
-  }, [updateConnections, previewCollapsed])
-
-  // 内容变化时更新连接线
-  useEffect(() => {
-    setTimeout(updateConnections, 200)
-  }, [content, comments, updateConnections])
-
-  // 高亮预览区中有批注的文字
-  useEffect(() => {
-    if (previewCollapsed || !previewRef.current) return
-
-    const previewEl = previewRef.current
-
-    // 先清除之前的高亮
-    const existingHighlights = previewEl.querySelectorAll('.comment-quote-highlight')
-    existingHighlights.forEach((el) => {
-      const parent = el.parentNode
-      if (parent) {
-        while (el.firstChild) {
-          parent.insertBefore(el.firstChild, el)
-        }
-        parent.removeChild(el)
-      }
-    })
-
-    // 为有批注的文字添加高亮（排除已解决的）
-    const unresolvedComments = comments.filter((c) => !c.resolved)
-
-    unresolvedComments.forEach((c) => {
-      if (!c.quote) return
-
-      const walker = document.createTreeWalker(
-        previewEl,
-        NodeFilter.SHOW_TEXT,
-        null,
-        false
+      addComment(
+        projectId,
+        createComment({
+          text: text.trim(),
+          quote: quote || '',
+          lineStart: null,
+          anchorOffset: typeof selection?.from === 'number' ? selection.from : null,
+          selectionTo: typeof selection?.to === 'number' ? selection.to : null,
+        })
       )
-      let node
-      while ((node = walker.nextNode())) {
-        const idx = node.textContent.indexOf(c.quote)
-        if (idx !== -1) {
-          const range = document.createRange()
-          range.setStart(node, idx)
-          range.setEnd(node, idx + c.quote.length)
 
-          const highlight = document.createElement('span')
-          highlight.className = 'comment-quote-highlight'
-          highlight.style.background = 'rgba(250, 204, 21, 0.4)'
-          highlight.style.borderRadius = '2px'
-          highlight.style.cursor = 'pointer'
-          highlight.dataset.commentId = c.id
+      showTip('注释已添加')
+    },
+    [addComment, projectId, showTip]
+  )
 
-          try {
-            range.surroundContents(highlight)
-          } catch (e) {
-            // 跨元素时忽略
-          }
-          break
-        }
+  const handleSendAiMessage = useCallback(
+    async (inputText) => {
+      if (!projectId) return
+
+      const nextText = (inputText ?? aiSession.draft).trim()
+      if (!nextText) return
+
+      const history = aiSession.messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      }))
+
+      pushMessage(projectId, createAiMessage({ role: 'user', content: nextText }))
+      setDraft(projectId, '')
+      setRequestState(projectId, 'pending', '')
+
+      try {
+        const response = await aiApi.chat({
+          projectId,
+          message: nextText,
+          messages: history,
+          documentHtml: editorRef.current?.getHTML?.() || content,
+          selectionText: aiSession.lastSelection?.text || undefined,
+        })
+
+        pushMessage(
+          projectId,
+          createAiMessage({
+            role: 'assistant',
+            content: response.assistantMessage || '已收到，但当前没有生成内容。',
+          })
+        )
+        setRequestState(projectId, 'idle', '')
+      } catch (error) {
+        setRequestState(
+          projectId,
+          'idle',
+          error instanceof Error ? error.message : 'AI 请求失败，请稍后重试。'
+        )
       }
-    })
-  }, [content, comments, previewCollapsed])
+    },
+    [
+      aiSession.draft,
+      aiSession.lastSelection?.text,
+      aiSession.messages,
+      content,
+      projectId,
+      pushMessage,
+      setDraft,
+      setRequestState,
+    ]
+  )
 
-  // 点击其他地方关闭按钮
-  useEffect(() => {
-    if (!showCommentBtn) return
+  const handleSelectionAiAction = useCallback(
+    async (action, selection) => {
+      if (!projectId || !selection?.text) return
 
-    const handleClickOutside = (e) => {
-      if (!e.target.closest(`.${styles.commentBtn}`)) {
-        setTimeout(() => {
-          const selection = window.getSelection()
-          if (!selection.toString().trim()) {
-            setShowCommentBtn(false)
-          }
-        }, 100)
+      const actionLabel = ACTION_LABELS[action] || '处理'
+      const normalizedSelection = {
+        text: selection.text,
+        from: selection.from,
+        to: selection.to,
+        action,
       }
-    }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showCommentBtn])
+      setSelectionContext(projectId, normalizedSelection)
+      setRequestState(projectId, 'pending', '')
+      setResultPreview(projectId, null)
+      pushMessage(
+        projectId,
+        createAiMessage({
+          role: 'user',
+          content: `${actionLabel}这段内容：${truncateText(selection.text, 120)}`,
+          source: 'selection',
+        })
+      )
+
+      try {
+        const response = await aiApi.transform({
+          projectId,
+          action,
+          selectedText: selection.text,
+          documentHtml: editorRef.current?.getHTML?.() || content,
+          surroundingContext: {
+            title: project?.name || '',
+          },
+        })
+
+        pushMessage(
+          projectId,
+          createAiMessage({
+            role: 'assistant',
+            content: response.explanation || `${actionLabel}已完成，你可以预览后选择替换或插入。`,
+            source: 'selection',
+          })
+        )
+
+        setResultPreview(projectId, {
+          title: actionLabel,
+          sourceText: selection.text,
+          resultText: response.resultText || '',
+          explanation: response.explanation || '',
+        })
+        setRequestState(projectId, 'idle', '')
+      } catch (error) {
+        setRequestState(
+          projectId,
+          'idle',
+          error instanceof Error ? error.message : '选区 AI 请求失败，请稍后重试。'
+        )
+      }
+    },
+    [
+      content,
+      project?.name,
+      projectId,
+      pushMessage,
+      setRequestState,
+      setResultPreview,
+      setSelectionContext,
+    ]
+  )
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div>
+        <div className={styles.headerMain}>
+          <button type="button" className={styles.backButton} onClick={handleBack}>
+            返回项目
+          </button>
           <h1>智能文档</h1>
           <p>
             {project?.name || '当前项目'} · PRD 撰写与接口文档自动关联，文档—原型—接口动态同步
@@ -447,93 +339,43 @@ export function DocumentsPage() {
       </header>
       {fileTip ? <p className={styles.fileTip}>{fileTip}</p> : null}
       <div className={styles.body}>
-        {/* 编辑器 */}
-        <div className={styles.editorWrap} ref={editorRef}>
-          <MDEditor
-            value={content}
-            onChange={handleChange}
-            height="100%"
-            preview="edit"
-            visibleDragbar={false}
-            commands={editorCommands}
-            extraCommands={[]}
-            textareaProps={{
-              placeholder: '在此撰写 PRD、需求说明或设计备注...',
-            }}
+        <div className={styles.workspace}>
+          <div className={styles.editorWrap}>
+            <DocumentEditor
+              ref={editorRef}
+              value={content}
+              onChange={handleChange}
+              onSubmitComment={handleSubmitComment}
+              onAiAction={handleSelectionAiAction}
+            />
+          </div>
+          <aside className={styles.assistantRail}>
+            <DocumentAiPanel
+              layout="docked"
+              isOpen
+              showCloseButton={false}
+              draft={aiSession.draft}
+              messages={aiSession.messages}
+              error={aiSession.error}
+              requestStatus={aiSession.requestStatus}
+              selectionContext={aiSession.lastSelection}
+              resultPreview={aiSession.resultPreview}
+              onClose={() => {}}
+              onDraftChange={(nextDraft) => projectId && setDraft(projectId, nextDraft)}
+              onSend={() => handleSendAiMessage()}
+              onQuickPrompt={handleSendAiMessage}
+              onApplyResult={handleApplyAiResult}
+              onClearResult={() => projectId && setResultPreview(projectId, null)}
+            />
+          </aside>
+        </div>
+        <aside className={styles.previewRail}>
+          <DocumentPreviewPanel
+            content={content}
+            comments={comments}
+            projectName={project?.name}
           />
-        </div>
-
-        {/* 预览 + 批注 */}
-        <div
-          className={[styles.previewWithComments, previewCollapsed ? styles.collapsed : ''].join(' ')}
-          ref={containerRef}
-        >
-          {/* 折叠/展开按钮 */}
-          <button
-            type="button"
-            className={[styles.togglePreviewBtn, previewCollapsed ? styles.collapsed : ''].join(' ')}
-            onClick={() => setPreviewCollapsed((v) => !v)}
-            title={previewCollapsed ? '展开预览' : '折叠预览'}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </button>
-
-          {/* 折叠状态显示 */}
-          <div className={styles.collapsedBar}>
-            <span>预览</span>
-            <span>·</span>
-            <span>{comments.length} 条批注</span>
-          </div>
-
-          {/* 预览区 */}
-          <div
-            className={styles.previewWrap}
-            ref={previewRef}
-            onMouseUp={handlePreviewMouseUp}
-          >
-            <MarkdownPreview
-              source={content}
-              rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
-            />
-            {showCommentBtn && (
-              <button
-                type="button"
-                className={styles.commentBtn}
-                style={{ top: commentBtnPos.top, left: commentBtnPos.left }}
-                onClick={handleAddCommentClick}
-              >
-                + 添加批注
-              </button>
-            )}
-          </div>
-
-          {/* SVG 连接线层 */}
-          {!previewCollapsed && (
-            <svg className={styles.connectorLayer}>
-              {connections.map((conn) => (
-                <line
-                  key={conn.id}
-                  x1={conn.x1}
-                  y1={conn.y1}
-                  x2={conn.x2}
-                  y2={conn.y2}
-                />
-              ))}
-            </svg>
-          )}
-
-          {/* 批注栏 */}
-          {!previewCollapsed && (
-            <CommentSidebar
-              projectId={projectId}
-              pendingComment={pendingComment}
-              onClearPending={clearPending}
-              onLocateComment={handleLocateComment}
-            />
-          )}
-        </div>
+        </aside>
       </div>
     </div>
   )

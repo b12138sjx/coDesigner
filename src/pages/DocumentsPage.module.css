@@ -15,6 +15,13 @@
   gap: 14px;
 }
 
+.headerMain {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
 .header h1 {
   font-size: 1.25rem;
   margin: 0 0 4px 0;
@@ -47,6 +54,21 @@
   border-color: var(--color-primary);
 }
 
+.backButton {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.backButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
 .fileTip {
   margin: 8px 24px 0;
   color: var(--color-text-muted);
@@ -59,188 +81,107 @@
   min-height: 0;
 }
 
-/* 编辑器区域 */
+.workspace {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+}
+
 .editorWrap {
   flex: 1;
   min-height: 0;
   min-width: 0;
+  padding: 16px 0 16px 16px;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--color-border);
 }
 
-.editorWrap :global(.w-md-editor) {
+.editorWrap > * {
   flex: 1;
-  border: none;
-  border-radius: 0;
+  min-height: 400px;
 }
 
-.editorWrap :global(.w-md-editor-toolbar) {
-  border-radius: 0;
-}
-
-/* 右侧模式切换按钮已通过 extraCommands={[]} 隐藏 */
-
-/* 预览+批注区域容器 */
-.previewWithComments {
+.assistantRail {
+  width: min(332px, 31vw);
+  min-width: 300px;
+  padding: 16px 16px 16px 0;
   display: flex;
-  width: 50%;
-  min-width: 0;
   min-height: 0;
-  position: relative;
-  transition: width 0.3s ease;
 }
 
-.previewWithComments.collapsed {
-  width: 48px;
-  min-width: 48px;
-}
-
-/* 预览区域 */
-.previewWrap {
+.assistantRail > * {
   flex: 1;
   min-height: 0;
-  min-width: 0;
-  overflow: auto;
-  padding: 16px 24px;
-  background: var(--color-surface);
-  position: relative;
 }
 
-.previewWrap :global(.wmde-markdown) {
-  background: transparent !important;
-  color: var(--color-text) !important;
-  font-size: 0.95rem;
-  line-height: 1.7;
-}
-
-.previewWrap :global(.wmde-markdown h1) {
-  font-size: 1.75rem;
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: 0.5em;
-}
-
-.previewWrap :global(.wmde-markdown h2) {
-  font-size: 1.4rem;
-}
-
-.previewWrap :global(.wmde-markdown h3) {
-  font-size: 1.2rem;
-}
-
-.previewWrap :global(.wmde-markdown mark) {
-  background: rgba(250, 204, 21, 0.35);
-  color: inherit;
-  padding: 0 2px;
-  border-radius: 2px;
-}
-
-.previewWrap :global(.wmde-markdown u) {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-/* 选中时的高亮 */
-.previewWrap :global(.comment-highlight) {
-  background: rgba(59, 130, 246, 0.2);
-  border-radius: 2px;
-  transition: background 0.3s;
-}
-
-/* 折叠按钮 */
-.togglePreviewBtn {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 48px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-left: none;
-  border-radius: 0 6px 6px 0;
-  cursor: pointer;
+.previewRail {
+  width: 340px;
+  min-width: 300px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  z-index: 20;
-  transition: background 0.2s;
+  min-height: 0;
 }
 
-.togglePreviewBtn:hover {
-  background: var(--color-surface);
-  color: var(--color-text);
+.previewRail > * {
+  flex: 1;
+  min-height: 0;
 }
 
-.togglePreviewBtn svg {
-  transition: transform 0.2s;
+@media (max-width: 1380px) {
+  .workspace {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .editorWrap {
+    padding: 16px 16px 0;
+  }
+
+  .assistantRail {
+    width: auto;
+    min-width: 0;
+    padding: 0 16px 16px;
+  }
 }
 
-.togglePreviewBtn.collapsed svg {
-  transform: rotate(180deg);
+@media (max-width: 1180px) {
+  .body {
+    flex-direction: column;
+  }
+
+  .previewRail {
+    width: auto;
+    min-width: 0;
+  }
 }
 
-/* 折叠状态下的工具栏 */
-.collapsedBar {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 4px;
-  gap: 8px;
-  color: var(--color-text-muted);
-  font-size: 0.7rem;
-  writing-mode: vertical-rl;
-}
+@media (max-width: 880px) {
+  .header {
+    padding: 16px;
+    flex-direction: column;
+  }
 
-.previewWithComments.collapsed .collapsedBar {
-  display: flex;
-}
+  .fileActions {
+    flex-wrap: wrap;
+  }
 
-.previewWithComments.collapsed .previewWrap {
-  display: none;
-}
+  .body {
+    flex-direction: column;
+  }
 
-.previewWithComments.collapsed :global(.CommentSidebar) {
-  display: none;
-}
+  .editorWrap {
+    padding: 12px 12px 0;
+  }
 
-/* 连接线层 */
-.connectorLayer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 100;
-  overflow: visible;
-}
+  .assistantRail {
+    padding: 0 12px 12px;
+  }
 
-.connectorLayer line {
-  stroke: var(--color-primary);
-  stroke-width: 1;
-  stroke-dasharray: 4 2;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-
-/* 添加批注按钮 */
-.commentBtn {
-  position: absolute;
-  z-index: 100;
-  padding: 4px 10px;
-  font-size: 0.75rem;
-  color: var(--color-primary);
-  background: var(--color-surface);
-  border: 1px solid var(--color-primary);
-  border-radius: 4px;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  white-space: nowrap;
-}
-
-.commentBtn:hover {
-  background: var(--color-primary);
-  color: #fff;
+  .previewRail {
+    width: auto;
+  }
 }

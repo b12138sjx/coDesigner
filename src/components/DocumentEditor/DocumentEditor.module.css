@@ -1,112 +1,364 @@
 .wrapper {
   height: 100%;
-  min-height: 400px;
+  min-height: 420px;
   display: flex;
   flex-direction: column;
-  --color-canvas-default: var(--color-surface);
-  --color-canvas-subtle: var(--color-bg);
-  --color-fg-default: var(--color-text);
-  --color-fg-muted: var(--color-text-muted);
-  --color-border-default: var(--color-border);
 }
 
-.wrapper :global(.w-md-editor) {
+.shell {
   flex: 1;
-  min-height: 360px;
-}
-
-.wrapper :global(.wmde-markdown-var) {
-  background: var(--color-surface) !important;
-  color: var(--color-text) !important;
-}
-
-.wrapper :global(.w-md-editor) {
-  background: var(--color-surface) !important;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 26%),
+    var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
 }
 
-.wrapper :global(.w-md-editor-toolbar) {
-  background: var(--color-bg) !important;
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--color-border);
+  background:
+    linear-gradient(180deg, rgba(59, 130, 246, 0.08), transparent 72%),
+    var(--color-bg);
 }
 
-/* 右侧模式切换按钮已通过 extraCommands={[]} 隐藏，此处不再用 CSS 隐藏 ul */
+.toolbarGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 10px;
+  margin-right: 2px;
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+}
 
-.wrapper :global(.w-md-editor-toolbar button) {
+.toolbarGroup:last-child {
+  border-right: none;
+  padding-right: 0;
+  margin-right: 0;
+}
+
+.toolButton {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 11px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
   color: var(--color-text);
-}
-
-.wrapper :global(.w-md-editor-content) {
-  background: var(--color-surface) !important;
-}
-
-.wrapper :global(.w-md-editor-area) {
-  color: var(--color-text) !important;
-}
-
-.wrapper :global(.w-md-editor-preview) {
-  background: var(--color-surface) !important;
-  color: var(--color-text) !important;
-}
-
-.wrapper :global(.w-md-editor-input),
-.wrapper :global(.w-md-editor-text),
-.wrapper :global(.w-md-editor-text-pre),
-.wrapper :global(.w-md-editor-text-input),
-.wrapper :global(.wmde-markdown),
-.wrapper :global(.wmde-markdown-color) {
-  background: var(--color-surface) !important;
-  color: var(--color-text) !important;
-}
-
-.wrapper :global(.w-md-editor-text-pre > code),
-.wrapper :global(.w-md-editor-text-input),
-.wrapper :global(.w-md-editor-text-pre) {
-  -webkit-text-fill-color: var(--color-text) !important;
-}
-
-.wrapper :global(.w-md-editor-text-pre),
-.wrapper :global(.w-md-editor-text-input),
-.wrapper :global(.w-md-editor-text) {
-  background: var(--color-surface) !important;
-  color: var(--color-text) !important;
-}
-
-.wrapper :global(.w-md-editor-preview mark) {
-  background: rgba(250, 204, 21, 0.35);
-  color: inherit;
-  padding: 0 2px;
-  border-radius: 2px;
-}
-
-.wrapper :global(.w-md-editor-preview u) {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-/* 添加批注按钮 */
-.commentBtn {
-  position: absolute;
-  z-index: 100;
-  padding: 6px 12px;
-  font-size: 0.8rem;
-  color: var(--color-primary);
-  background: var(--color-surface);
-  border: 1px solid var(--color-primary);
-  border-radius: 6px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  white-space: nowrap;
-  transform: translateX(-50%);
+  font-size: 0.84rem;
+  font-weight: 600;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
 }
 
-.commentBtn:hover {
+.toolButton:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.toolButtonActive {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(59, 130, 246, 0.42);
+  color: var(--color-primary);
+}
+
+.toolButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.editorSurface {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.editorCanvas {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.editorContent {
+  min-height: 100%;
+  padding: 28px 32px 36px;
+  outline: none;
+}
+
+.editorContent :global(.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  height: 0;
+}
+
+.editorContent :global(p) {
+  margin: 0 0 14px;
+  line-height: 1.75;
+}
+
+.editorContent :global(h1),
+.editorContent :global(h2),
+.editorContent :global(h3) {
+  margin: 0 0 12px;
+  line-height: 1.25;
+}
+
+.editorContent :global(h1) {
+  font-size: 2rem;
+}
+
+.editorContent :global(h2) {
+  font-size: 1.42rem;
+}
+
+.editorContent :global(h3) {
+  font-size: 1.12rem;
+}
+
+.editorContent :global(ul),
+.editorContent :global(ol) {
+  margin: 0 0 16px 24px;
+}
+
+.editorContent :global(li) {
+  margin-bottom: 8px;
+}
+
+.editorContent :global(blockquote) {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--color-primary);
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 0 14px 14px 0;
+}
+
+.editorContent :global(code) {
+  background: rgba(148, 163, 184, 0.18);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 0.9em;
+}
+
+.editorContent :global(mark) {
+  background: rgba(250, 204, 21, 0.28);
+  color: inherit;
+  padding: 0 3px;
+  border-radius: 4px;
+}
+
+.selectionToolbar,
+.selectionToolbarMeasure {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: min(360px, calc(100% - 24px));
+  padding: 6px 8px;
+  border: 1px solid rgba(226, 232, 240, 0.94);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+.selectionToolbarMeasure,
+.commentComposerMeasure {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.selectionToolbarButton,
+.selectionCommentButton,
+.selectionToolbarPrimary {
+  min-height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.selectionCommentButton {
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+}
+
+.selectionToolbarPrimary {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color-primary);
+}
+
+.selectionToolbarButton:hover,
+.selectionToolbarPrimary:hover,
+.selectionCommentButton:hover {
+  background-color: rgba(59, 130, 246, 0.12);
+  color: var(--color-primary);
+}
+
+.selectionCommentButton:hover {
+  background: rgba(15, 23, 42, 0.96);
+  color: #fff;
+}
+
+.selectionToolbarPrimary:hover {
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.selectionToolbarDivider {
+  width: 1px;
+  height: 18px;
+  background: rgba(148, 163, 184, 0.24);
+}
+
+.selectionAiTray {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 6px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(226, 232, 240, 0.94);
+}
+
+.commentComposerPopover,
+.commentComposerMeasure {
+  position: absolute;
+  z-index: 5;
+  width: 260px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.94);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.commentComposerHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.commentAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.commentMeta {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.commentMeta strong {
+  font-size: 0.8rem;
+}
+
+.commentMeta span {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.commentClose {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.commentInput {
+  width: 100%;
+  min-height: 54px;
+  resize: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: rgba(248, 250, 252, 0.88);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.commentInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.commentActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.commentGhost,
+.commentSubmit {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.commentGhost {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.commentSubmit {
+  border: none;
   background: var(--color-primary);
   color: #fff;
 }
 
-/* 预览区相对定位，用于放置批注按钮 */
-.wrapper :global(.w-md-editor-preview) {
-  position: relative;
+.commentSubmit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .editorContent {
+    padding: 20px 20px 30px;
+  }
+
+  .selectionToolbar,
+  .selectionToolbarMeasure {
+    max-width: calc(100% - 24px);
+  }
+
+  .commentComposerPopover,
+  .commentComposerMeasure {
+    width: min(260px, calc(100% - 24px));
+  }
 }

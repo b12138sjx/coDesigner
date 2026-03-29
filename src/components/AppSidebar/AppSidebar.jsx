@@ -10,6 +10,13 @@ function resolveProjectIdFromPath(pathname) {
   return match?.[1] || null
 }
 
+function resolveProjectPath(pathname, projectId) {
+  if (!projectId) return '/projects'
+  const match = pathname.match(/^\/(project|design|documents|api)\//)
+  const scope = match?.[1] || 'project'
+  return `/${scope}/${projectId}`
+}
+
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
@@ -49,7 +56,7 @@ export function AppSidebar() {
     const nextProjectId = event.target.value
     if (!nextProjectId) return
     setCurrentProject(nextProjectId)
-    navigate(`/project/${nextProjectId}`)
+    navigate(resolveProjectPath(location.pathname, nextProjectId))
   }
 
   return (

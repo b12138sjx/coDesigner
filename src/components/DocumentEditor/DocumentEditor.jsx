@@ -1,238 +1,702 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import MDEditor, { commands } from '@uiw/react-md-editor'
-import '@uiw/react-md-editor/markdown-editor.css'
-import rehypeRaw from 'rehype-raw'
-import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
-import { useUiStore } from '@/stores/uiStore'
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
+import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Highlight from '@tiptap/extension-highlight'
+import Placeholder from '@tiptap/extension-placeholder'
+import { plainTextToHtml, truncateText } from '@/utils/documentContent'
 import styles from './DocumentEditor.module.css'
 
-// 扩展 schema：允许 <u>、<mark> 用于下划线与高亮
-const schema = {
-  ...defaultSchema,
-  tagNames: [...(defaultSchema.tagNames || []), 'u', 'mark'],
-  attributes: { ...defaultSchema.attributes, u: [], mark: [] },
-}
-
-// 下划线：用 HTML <u>
-const underlineCommand = {
-  name: 'underline',
-  keyCommand: 'underline',
-  buttonProps: { 'aria-label': '下划线', title: '下划线' },
-  icon: (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M6 4v6a6 6 0 0012 0V4M4 20h16" />
-    </svg>
-  ),
-  execute: (state, api) => {
-    const { selectedText } = state
-    const prefix = '<u>'
-    const suffix = '</u>'
-    if (selectedText && selectedText.startsWith(prefix) && selectedText.endsWith(suffix)) {
-      api.replaceSelection(selectedText.slice(prefix.length, -suffix.length))
-    } else {
-      api.replaceSelection(prefix + (selectedText || '') + suffix)
-    }
-  },
-}
-
-// 高亮：用 HTML <mark>
-const highlightCommand = {
-  name: 'highlight',
-  keyCommand: 'highlight',
-  buttonProps: { 'aria-label': '高亮', title: '高亮' },
-  icon: (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M15.24 2.53l-.52-.52A2.5 2.5 0 0012 1h-1.5A2.5 2.5 0 008 3.5V4H5.5A2.5 2.5 0 003 6.5v12A2.5 2.5 0 005.5 21h13a2.5 2.5 0 002.5-2.5v-12A2.5 2.5 0 0018.5 4H16v-.5A2.5 2.5 0 0013.5 1H12a2.5 2.5 0 00-1.76.73l-.52.52a.5.5 0 01-.35.15H8.5a.5.5 0 00-.5.5v1a.5.5 0 01-.5.5.5.5 0 000 1 .5.5 0 01.5.5v1a.5.5 0 00.5.5h2.59a.5.5 0 01.35.15l.52.52a2.5 2.5 0 001.76.73h1a2.5 2.5 0 002.5-2.5v-1a.5.5 0 01.5-.5.5.5 0 000-1 .5.5 0 01-.5-.5v-1a.5.5 0 00-.5-.5h-2.59a.5.5 0 01-.35-.15z" />
-    </svg>
-  ),
-  execute: (state, api) => {
-    const { selectedText } = state
-    const prefix = '<mark>'
-    const suffix = '</mark>'
-    if (selectedText && selectedText.startsWith(prefix) && selectedText.endsWith(suffix)) {
-      api.replaceSelection(selectedText.slice(prefix.length, -suffix.length))
-    } else {
-      api.replaceSelection(prefix + (selectedText || '') + suffix)
-    }
-  },
-}
-
-const editorCommands = [
-  commands.bold,
-  commands.italic,
-  commands.strikethrough,
-  underlineCommand,
-  highlightCommand,
-  commands.divider,
-  commands.title,
-  commands.divider,
-  commands.link,
-  commands.quote,
-  commands.code,
-  commands.divider,
-  commands.unorderedListCommand,
-  commands.orderedListCommand,
-  commands.checkedListCommand,
-  commands.divider,
-  commands.codeEdit,
-  commands.codePreview,
+const SELECTION_ACTIONS = [
+  { key: 'polish', label: '润色' },
+  { key: 'concise', label: '更简洁' },
+  { key: 'expand', label: '扩写' },
+  { key: 'summarize', label: '总结' },
+  { key: 'explain', label: '解释' },
 ]
 
-/**
- * 获取选中文本在 Markdown 源码中的位置
- */
-function getSelectionInSource(selection, previewEl, content) {
-  if (!selection || selection.rangeCount === 0) return null
+const PRIMARY_SELECTION_ACTION = SELECTION_ACTIONS[0]
+const SECONDARY_SELECTION_ACTIONS = SELECTION_ACTIONS.slice(1)
 
-  const range = selection.getRangeAt(0)
-  const selectedText = selection.toString().trim()
-  if (!selectedText) return null
-
-  // 获取选中区域在预览区的位置
-  const rect = range.getBoundingClientRect()
-  const previewRect = previewEl.getBoundingClientRect()
-
-  return {
-    selectedText,
-    previewRect: {
-      top: rect.top - previewRect.top + previewEl.scrollTop,
-      left: rect.left - previewRect.left,
-      width: rect.width,
-      height: rect.height,
-    },
-  }
+const EMPTY_EDITOR_STATE = {
+  selectedText: '',
+  hasSelection: false,
+  isH1: false,
+  isH2: false,
+  isH3: false,
+  isBold: false,
+  isItalic: false,
+  isUnderline: false,
+  isHighlight: false,
+  isBulletList: false,
+  isOrderedList: false,
+  isBlockquote: false,
 }
 
-export function DocumentEditor({
-  value,
-  onChange,
-  onAddComment,
-  onPreviewSelect,
-  commentMarkers, // [{ id, quote, anchorOffset }]
-  editorRef,
-  previewRef,
-}) {
-  const theme = useUiStore((state) => state.theme)
-  const colorMode = theme === 'light' ? 'light' : 'dark'
-  const [showCommentBtn, setShowCommentBtn] = useState(false)
-  const [commentBtnPos, setCommentBtnPos] = useState({ top: 0, left: 0 })
-  const [currentSelection, setCurrentSelection] = useState(null)
-  const internalRef = useRef(null)
+function clampPosition(value, min, max) {
+  return Math.max(min, Math.min(max, value))
+}
 
-  const containerRef = editorRef || internalRef
+function normalizeComparableText(input = '') {
+  return String(input || '').replace(/\s+/g, ' ').trim()
+}
 
-  // 处理预览区选中
-  const handlePreviewMouseUp = useCallback(
-    (e) => {
-      const previewEl = containerRef.current?.querySelector('.w-md-editor-preview')
-      if (!previewEl) return
+function findQuoteRange(doc, quote) {
+  if (!quote) return null
 
-      const selection = window.getSelection()
-      const info = getSelectionInSource(selection, previewEl, value)
+  let result = null
 
-      if (info && info.selectedText) {
-        const rect = selection.getRangeAt(0).getBoundingClientRect()
-        const previewRect = previewEl.getBoundingClientRect()
+  doc.descendants((node, pos) => {
+    if (result) return false
+    if (!node.isText || !node.text) return true
 
-        setCurrentSelection({
-          quote: info.selectedText,
-          previewRect: info.previewRect,
-        })
-        setCommentBtnPos({
-          top: rect.bottom - previewRect.top + previewEl.scrollTop + 8,
-          left: rect.left - previewRect.left + rect.width / 2 - 40,
-        })
-        setShowCommentBtn(true)
-      } else {
-        setShowCommentBtn(false)
-        setCurrentSelection(null)
+    const index = node.text.indexOf(quote)
+    if (index === -1) return true
+
+    result = {
+      from: pos + index + 1,
+      to: pos + index + quote.length + 1,
+    }
+    return false
+  })
+
+  return result
+}
+
+function getSelectionSnapshot(editor) {
+  if (!editor) return null
+
+  const { from, to, empty } = editor.state.selection
+  const text = editor.state.doc.textBetween(from, to, ' ').trim()
+
+  if (empty || !text) return null
+
+  return { text, from, to }
+}
+
+function resolveSelectionRange(editor, selectionContext = null) {
+  if (!editor) return null
+
+  const docSize = editor.state.doc.content.size
+  const sourceText = normalizeComparableText(selectionContext?.text)
+
+  if (
+    typeof selectionContext?.from === 'number' &&
+    typeof selectionContext?.to === 'number' &&
+    selectionContext.to > selectionContext.from
+  ) {
+    const from = clampPosition(selectionContext.from, 1, docSize)
+    const to = clampPosition(selectionContext.to, from, docSize)
+    const currentText = normalizeComparableText(editor.state.doc.textBetween(from, to, ' '))
+
+    if (!sourceText || currentText === sourceText) {
+      return { from, to }
+    }
+  }
+
+  if (selectionContext?.text) {
+    return findQuoteRange(editor.state.doc, selectionContext.text)
+  }
+
+  return null
+}
+
+function ToolbarButton({ active, disabled, onClick, children, title }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClick}
+      className={[styles.toolButton, active ? styles.toolButtonActive : ''].filter(Boolean).join(' ')}
+    >
+      {children}
+    </button>
+  )
+}
+
+export const DocumentEditor = forwardRef(function DocumentEditor(
+  {
+    value,
+    onChange,
+    onSubmitComment,
+    onAiAction,
+  },
+  ref
+) {
+  const editorCanvasRef = useRef(null)
+  const editorSurfaceRef = useRef(null)
+  const selectionToolbarRef = useRef(null)
+  const commentComposerRef = useRef(null)
+  const commentInputRef = useRef(null)
+  const pointerSelectingRef = useRef(false)
+  const [stableSelection, setStableSelection] = useState(null)
+  const [selectionToolbarPosition, setSelectionToolbarPosition] = useState(null)
+  const [commentComposerPosition, setCommentComposerPosition] = useState(null)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [commentContext, setCommentContext] = useState(null)
+  const [isAiTrayOpen, setIsAiTrayOpen] = useState(false)
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        codeBlock: false,
+        heading: {
+          levels: [1, 2, 3],
+        },
+      }),
+      Highlight.configure({
+        multicolor: false,
+      }),
+      Placeholder.configure({
+        placeholder: '在此撰写 PRD、需求说明与设计备注。你可以随时点击右下角 AI 助手，或选中文本后直接发起润色、扩写、总结。',
+      }),
+    ],
+    content: value || '<p></p>',
+    editorProps: {
+      attributes: {
+        class: styles.editorContent,
+      },
+    },
+    immediatelyRender: true,
+    onUpdate: ({ editor: instance }) => {
+      onChange?.(instance.getHTML())
+    },
+  })
+
+  const editorState = useEditorState({
+    editor,
+    selector: ({ editor: instance }) => {
+      if (!instance) return EMPTY_EDITOR_STATE
+
+      const selection = instance.state.selection
+      const selectedText = instance.state.doc.textBetween(selection.from, selection.to, ' ').trim()
+      const hasSelection = !selection.empty && Boolean(selectedText)
+
+      return {
+        selectedText,
+        hasSelection,
+        isH1: instance.isActive('heading', { level: 1 }),
+        isH2: instance.isActive('heading', { level: 2 }),
+        isH3: instance.isActive('heading', { level: 3 }),
+        isBold: instance.isActive('bold'),
+        isItalic: instance.isActive('italic'),
+        isUnderline: instance.isActive('underline'),
+        isHighlight: instance.isActive('highlight'),
+        isBulletList: instance.isActive('bulletList'),
+        isOrderedList: instance.isActive('orderedList'),
+        isBlockquote: instance.isActive('blockquote'),
       }
     },
-    [value, containerRef]
+  }) || EMPTY_EDITOR_STATE
+
+  useEffect(() => {
+    if (!editor) return
+    const nextValue = value || '<p></p>'
+    if (nextValue === editor.getHTML()) return
+    editor.commands.setContent(nextValue, false)
+  }, [editor, value])
+
+  useEffect(() => {
+    if (!editor) return
+
+    const commitSelection = () => {
+      if (commentContext) return
+      setStableSelection(getSelectionSnapshot(editor))
+    }
+
+    const handlePointerDown = () => {
+      pointerSelectingRef.current = true
+      if (!commentContext) {
+        setStableSelection(null)
+      }
+    }
+
+    const handlePointerUp = () => {
+      pointerSelectingRef.current = false
+      window.requestAnimationFrame(commitSelection)
+    }
+
+    const handleSelectionUpdate = () => {
+      if (pointerSelectingRef.current || commentContext) return
+      setStableSelection(getSelectionSnapshot(editor))
+    }
+
+    const handleKeyUp = () => {
+      if (commentContext) return
+      window.requestAnimationFrame(commitSelection)
+    }
+
+    const dom = editor.view.dom
+
+    dom.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('pointerup', handlePointerUp)
+    dom.addEventListener('keyup', handleKeyUp)
+    editor.on('selectionUpdate', handleSelectionUpdate)
+    editor.on('focus', handleSelectionUpdate)
+
+    return () => {
+      dom.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('pointerup', handlePointerUp)
+      dom.removeEventListener('keyup', handleKeyUp)
+      editor.off('selectionUpdate', handleSelectionUpdate)
+      editor.off('focus', handleSelectionUpdate)
+    }
+  }, [commentContext, editor])
+
+  useEffect(() => {
+    if (!commentContext || !commentInputRef.current) return
+    commentInputRef.current.focus()
+  }, [commentContext])
+
+  useEffect(() => {
+    if (commentContext || !stableSelection) {
+      setIsAiTrayOpen(false)
+    }
+  }, [commentContext, stableSelection])
+
+  useEffect(() => {
+    if (!editor || !editorCanvasRef.current) return
+
+    const getSelectionMetrics = (selectionContext) => {
+      const range = resolveSelectionRange(editor, selectionContext)
+      if (!range) return null
+
+      const start = editor.view.coordsAtPos(range.from)
+      const end = editor.view.coordsAtPos(range.to)
+      const tailPos = Math.max(range.from, range.to - 1)
+      const tail = editor.view.coordsAtPos(tailPos)
+      const useTailAnchor = Math.abs(tail.top - start.top) > 4
+
+      const anchorLeft = useTailAnchor
+        ? Math.min(tail.left, end.left)
+        : Math.min(start.left, end.left)
+      const anchorRight = useTailAnchor
+        ? Math.max(tail.right, end.right)
+        : Math.max(start.right, end.right)
+      const anchorTop = useTailAnchor
+        ? Math.min(tail.top, end.top)
+        : Math.min(start.top, end.top)
+      const anchorBottom = useTailAnchor
+        ? Math.max(tail.bottom, end.bottom)
+        : Math.max(start.bottom, end.bottom)
+
+      return {
+        left: anchorLeft,
+        right: anchorRight,
+        top: anchorTop,
+        bottom: anchorBottom,
+        centerX: (anchorLeft + anchorRight) / 2,
+      }
+    }
+
+    const getFloatingRect = (selectionContext, element, fallback, placement = 'top') => {
+      const metrics = getSelectionMetrics(selectionContext)
+      if (!metrics || !element) return null
+
+      const hostRect = editorCanvasRef.current.getBoundingClientRect()
+      const width = element.offsetWidth || fallback.width
+      const height = element.offsetHeight || fallback.height
+      const margin = 12
+      const gap = 10
+
+      let left = clampPosition(
+        metrics.left - hostRect.left - 8,
+        margin,
+        Math.max(margin, hostRect.width - width - margin)
+      )
+
+      let top = placement === 'bottom'
+        ? metrics.bottom - hostRect.top + gap
+        : metrics.top - hostRect.top - height - gap
+
+      if (placement === 'top' && top < margin) {
+        top = metrics.bottom - hostRect.top + gap
+      }
+
+      if (placement === 'bottom' && top + height > hostRect.height - margin) {
+        top = metrics.top - hostRect.top - height - gap
+      }
+
+      if (top + height > hostRect.height - margin) {
+        top = Math.max(margin, hostRect.height - height - margin)
+      }
+
+      return { left, top }
+    }
+
+    const syncFloatingUi = () => {
+      if (commentContext) {
+        setSelectionToolbarPosition(null)
+        setCommentComposerPosition(
+          getFloatingRect(commentContext, commentComposerRef.current, { width: 260, height: 148 }, 'bottom')
+        )
+        return
+      }
+
+      setCommentComposerPosition(null)
+      setSelectionToolbarPosition(
+        stableSelection
+          ? getFloatingRect(
+              stableSelection,
+              selectionToolbarRef.current,
+              { width: 248, height: isAiTrayOpen ? 88 : 42 },
+              'top'
+            )
+          : null
+      )
+    }
+
+    syncFloatingUi()
+
+    const scrollHost = editorSurfaceRef.current
+    scrollHost?.addEventListener('scroll', syncFloatingUi, { passive: true })
+    window.addEventListener('resize', syncFloatingUi)
+
+    return () => {
+      scrollHost?.removeEventListener('scroll', syncFloatingUi)
+      window.removeEventListener('resize', syncFloatingUi)
+    }
+  }, [commentContext, editor, stableSelection, commentDraft, isAiTrayOpen])
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      focus: () => {
+        if (!editor) return false
+        editor.commands.focus()
+        return true
+      },
+      getHTML: () => editor?.getHTML() || '',
+      getPlainText: () => editor?.getText() || '',
+      getSelectionContext: () => {
+        if (!editor) return null
+        const { from, to, empty } = editor.state.selection
+        const text = editor.state.doc.textBetween(from, to, ' ').trim()
+
+        if (empty || !text) return null
+
+        return { text, from, to }
+      },
+      applyAiResult: (mode, text, selectionContext = null) => {
+        if (!editor || !text?.trim()) return false
+
+        const html = plainTextToHtml(text)
+
+        if (mode === 'replace-selection') {
+          const range = resolveSelectionRange(editor, selectionContext)
+          if (!range) {
+            return {
+              ok: false,
+              reason: 'selection-changed',
+            }
+          }
+
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(range, html)
+            .run()
+          return { ok: true }
+        }
+
+        if (mode === 'insert-at-cursor') {
+          editor.chain().focus().insertContent(html).run()
+          return { ok: true }
+        }
+
+        if (mode === 'append-to-end') {
+          editor.chain().focus().insertContentAt(editor.state.doc.content.size, html).run()
+          return { ok: true }
+        }
+
+        return { ok: false, reason: 'unsupported-mode' }
+      },
+      locateComment: (comment) => {
+        if (!editor) return false
+
+        if (typeof comment?.anchorOffset === 'number') {
+          const from = clampPosition(comment.anchorOffset, 1, editor.state.doc.content.size)
+          const to = clampPosition(comment?.selectionTo || from, from, editor.state.doc.content.size)
+          editor.chain().focus().setTextSelection({ from, to }).run()
+          return true
+        }
+
+        const quoteRange = findQuoteRange(editor.state.doc, comment?.quote)
+        if (quoteRange) {
+          editor.chain().focus().setTextSelection(quoteRange).run()
+          return true
+        }
+
+        return false
+      },
+    }),
+    [editor]
   )
 
-  // 点击添加批注按钮
-  const handleAddCommentClick = useCallback(() => {
-    if (currentSelection) {
-      onAddComment?.(currentSelection.quote, null)
-      // 传递预览位置信息
-      onPreviewSelect?.({
-        quote: currentSelection.quote,
-        previewRect: currentSelection.previewRect,
-      })
-    }
-    setShowCommentBtn(false)
-    window.getSelection().removeAllRanges()
-  }, [currentSelection, onAddComment, onPreviewSelect])
+  if (!editor) return null
 
-  // 点击其他地方关闭按钮
-  useEffect(() => {
-    if (!showCommentBtn) return
+  const handleOpenCommentComposer = () => {
+    const snapshot = stableSelection || getSelectionSnapshot(editor)
+    if (!snapshot) return
 
-    const handleClickOutside = (e) => {
-      if (!e.target.closest(`.${styles.commentBtn}`)) {
-        // 延迟关闭，避免立即消失
-        setTimeout(() => {
-          const selection = window.getSelection()
-          if (!selection.toString().trim()) {
-            setShowCommentBtn(false)
-          }
-        }, 100)
-      }
-    }
+    setIsAiTrayOpen(false)
+    setCommentDraft('')
+    setCommentContext(snapshot)
+    setSelectionToolbarPosition(null)
+  }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showCommentBtn])
+  const handleAiAction = (action) => {
+    const snapshot = stableSelection || getSelectionSnapshot(editor)
+    if (!snapshot) return
 
-  // 绑定预览区事件
-  useEffect(() => {
-    const previewEl = containerRef.current?.querySelector('.w-md-editor-preview')
-    if (!previewEl) return
+    setIsAiTrayOpen(false)
+    onAiAction?.(action, {
+      action,
+      text: snapshot.text,
+      from: snapshot.from,
+      to: snapshot.to,
+    })
+  }
 
-    previewEl.addEventListener('mouseup', handlePreviewMouseUp)
-    return () => previewEl.removeEventListener('mouseup', handlePreviewMouseUp)
-  }, [handlePreviewMouseUp, containerRef])
+  const handleSubmitComment = () => {
+    if (!commentContext || !commentDraft.trim()) return
 
-  // 更新预览区 ref
-  useEffect(() => {
-    if (previewRef) {
-      const previewEl = containerRef.current?.querySelector('.w-md-editor-preview')
-      if (previewEl) {
-        previewRef.current = previewEl
-      }
-    }
-  }, [previewRef, containerRef])
+    onSubmitComment?.({
+      quote: commentContext.text,
+      selection: {
+        from: commentContext.from,
+        to: commentContext.to,
+      },
+      text: commentDraft.trim(),
+    })
 
-  return (
-    <div className={styles.wrapper} data-color-mode={colorMode} ref={containerRef}>
-      <MDEditor
-        data-color-mode={colorMode}
-        value={value}
-        onChange={onChange}
-        height="100%"
-        preview="live"
-        visibleDragbar={false}
-        commands={editorCommands}
-        extraCommands={[]}
-        previewOptions={{
-          rehypePlugins: [rehypeRaw, [rehypeSanitize, schema]],
-        }}
-        textareaProps={{
-          placeholder:
-            '在此撰写 PRD、需求说明或设计备注，支持 **粗体**、*斜体*、<u>下划线</u>、<mark>高亮</mark>。\n\n在预览区选中文字后点击「添加批注」可添加评论。',
-        }}
-      />
-      {showCommentBtn && (
-        <button
-          type="button"
-          className={styles.commentBtn}
-          style={{ top: commentBtnPos.top, left: commentBtnPos.left }}
-          onClick={handleAddCommentClick}
-        >
-          + 添加批注
-        </button>
-      )}
+    setCommentDraft('')
+    setStableSelection(commentContext)
+    setCommentContext(null)
+    editor.commands.focus()
+  }
+
+  const closeCommentComposer = () => {
+    setCommentDraft('')
+    setStableSelection(commentContext || stableSelection)
+    setCommentContext(null)
+    editor.commands.focus()
+  }
+
+  const renderSelectionToolbar = (className, style) => (
+    <div
+      ref={selectionToolbarRef}
+      className={className}
+      style={style}
+    >
+      <button
+        type="button"
+        className={styles.selectionCommentButton}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={handleOpenCommentComposer}
+      >
+        添加注释
+      </button>
+      <span className={styles.selectionToolbarDivider} />
+      <button
+        type="button"
+        className={styles.selectionToolbarPrimary}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => handleAiAction(PRIMARY_SELECTION_ACTION.key)}
+      >
+        AI 润色
+      </button>
+      <button
+        type="button"
+        className={styles.selectionToolbarButton}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setIsAiTrayOpen((current) => !current)}
+      >
+        {isAiTrayOpen ? '收起' : '更多 AI'}
+      </button>
+      {isAiTrayOpen ? (
+        <div className={styles.selectionAiTray}>
+          {SECONDARY_SELECTION_ACTIONS.map((action) => (
+            <button
+              key={action.key}
+              type="button"
+              className={styles.selectionToolbarButton}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => handleAiAction(action.key)}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
-}
+
+  return (
+    <div className={styles.wrapper}>
+      <div className={styles.shell}>
+        <div className={styles.toolbar}>
+          <div className={styles.toolbarGroup}>
+            <ToolbarButton
+              title="标题 1"
+              active={editorState.isH1}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            >
+              H1
+            </ToolbarButton>
+            <ToolbarButton
+              title="标题 2"
+              active={editorState.isH2}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            >
+              H2
+            </ToolbarButton>
+            <ToolbarButton
+              title="标题 3"
+              active={editorState.isH3}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            >
+              H3
+            </ToolbarButton>
+          </div>
+
+          <div className={styles.toolbarGroup}>
+            <ToolbarButton
+              title="加粗"
+              active={editorState.isBold}
+              onClick={() => editor.chain().focus().toggleBold().run()}
+            >
+              B
+            </ToolbarButton>
+            <ToolbarButton
+              title="斜体"
+              active={editorState.isItalic}
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+            >
+              I
+            </ToolbarButton>
+            <ToolbarButton
+              title="下划线"
+              active={editorState.isUnderline}
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+            >
+              U
+            </ToolbarButton>
+            <ToolbarButton
+              title="高亮"
+              active={editorState.isHighlight}
+              onClick={() => editor.chain().focus().toggleHighlight().run()}
+            >
+              Mark
+            </ToolbarButton>
+          </div>
+
+          <div className={styles.toolbarGroup}>
+            <ToolbarButton
+              title="无序列表"
+              active={editorState.isBulletList}
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+            >
+              • List
+            </ToolbarButton>
+            <ToolbarButton
+              title="有序列表"
+              active={editorState.isOrderedList}
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            >
+              1. List
+            </ToolbarButton>
+            <ToolbarButton
+              title="引用"
+              active={editorState.isBlockquote}
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            >
+              Quote
+            </ToolbarButton>
+          </div>
+
+        </div>
+
+        <div className={styles.editorCanvas} ref={editorCanvasRef}>
+          <div className={styles.editorSurface} ref={editorSurfaceRef}>
+            <EditorContent editor={editor} />
+          </div>
+
+          {stableSelection && selectionToolbarPosition && !commentContext ? (
+            renderSelectionToolbar(styles.selectionToolbar, {
+              left: `${selectionToolbarPosition.left}px`,
+              top: `${selectionToolbarPosition.top}px`,
+            })
+          ) : stableSelection && !commentContext ? (
+            renderSelectionToolbar(styles.selectionToolbarMeasure)
+          ) : null}
+
+          {commentContext && commentComposerPosition ? (
+            <div
+              ref={commentComposerRef}
+              className={styles.commentComposerPopover}
+              style={{
+                left: `${commentComposerPosition.left}px`,
+                top: `${commentComposerPosition.top}px`,
+              }}
+            >
+              <div className={styles.commentComposerHeader}>
+                <div className={styles.commentAvatar}>注</div>
+                <div className={styles.commentMeta}>
+                  <strong>添加注释</strong>
+                  <span>{truncateText(commentContext.text, 28)}</span>
+                </div>
+                <button type="button" className={styles.commentClose} onClick={closeCommentComposer}>
+                  关闭
+                </button>
+              </div>
+              <textarea
+                ref={commentInputRef}
+                className={styles.commentInput}
+                rows={2}
+                value={commentDraft}
+                onChange={(event) => setCommentDraft(event.target.value)}
+                placeholder="添加评论..."
+              />
+              <div className={styles.commentActions}>
+                <button
+                  type="button"
+                  className={styles.commentGhost}
+                  onClick={closeCommentComposer}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  className={styles.commentSubmit}
+                  onClick={handleSubmitComment}
+                  disabled={!commentDraft.trim()}
+                >
+                  发送
+                </button>
+              </div>
+            </div>
+          ) : commentContext ? (
+            <div ref={commentComposerRef} className={styles.commentComposerMeasure}>
+              <div className={styles.commentComposerHeader}>
+                <div className={styles.commentAvatar}>注</div>
+                <div className={styles.commentMeta}>
+                  <strong>添加注释</strong>
+                  <span>{truncateText(commentContext.text, 28)}</span>
+                </div>
+              </div>
+              <textarea className={styles.commentInput} rows={2} value="" readOnly />
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+})
