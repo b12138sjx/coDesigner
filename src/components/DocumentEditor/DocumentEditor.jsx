@@ -9,33 +9,27 @@ import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Highlight from '@tiptap/extension-highlight'
 import Placeholder from '@tiptap/extension-placeholder'
+import Underline from '@tiptap/extension-underline'
 import { plainTextToHtml, truncateText } from '@/utils/documentContent'
 import styles from './DocumentEditor.module.css'
 
 const SELECTION_ACTIONS = [
-  { key: 'polish', label: '润色' },
-  { key: 'concise', label: '更简洁' },
-  { key: 'expand', label: '扩写' },
-  { key: 'summarize', label: '总结' },
-  { key: 'explain', label: '解释' },
+  { key: 'polish',    label: '润色',    icon: '✦' },
+  { key: 'concise',   label: '更简洁',  icon: '◇' },
+  { key: 'expand',    label: '扩写',    icon: '⊕' },
+  { key: 'summarize', label: '总结',    icon: '◎' },
+  { key: 'explain',   label: '解释',    icon: '?' },
 ]
 
 const PRIMARY_SELECTION_ACTION = SELECTION_ACTIONS[0]
 const SECONDARY_SELECTION_ACTIONS = SELECTION_ACTIONS.slice(1)
 
 const EMPTY_EDITOR_STATE = {
-  selectedText: '',
-  hasSelection: false,
-  isH1: false,
-  isH2: false,
-  isH3: false,
-  isBold: false,
-  isItalic: false,
-  isUnderline: false,
-  isHighlight: false,
-  isBulletList: false,
-  isOrderedList: false,
-  isBlockquote: false,
+  selectedText: '', hasSelection: false,
+  isH1: false, isH2: false, isH3: false,
+  isBold: false, isItalic: false, isUnderline: false,
+  isHighlight: false, isBulletList: false,
+  isOrderedList: false, isBlockquote: false, isCode: false,
 }
 
 function clampPosition(value, min, max) {
@@ -48,40 +42,28 @@ function normalizeComparableText(input = '') {
 
 function findQuoteRange(doc, quote) {
   if (!quote) return null
-
   let result = null
-
   doc.descendants((node, pos) => {
     if (result) return false
     if (!node.isText || !node.text) return true
-
     const index = node.text.indexOf(quote)
     if (index === -1) return true
-
-    result = {
-      from: pos + index + 1,
-      to: pos + index + quote.length + 1,
-    }
+    result = { from: pos + index + 1, to: pos + index + quote.length + 1 }
     return false
   })
-
   return result
 }
 
 function getSelectionSnapshot(editor) {
   if (!editor) return null
-
   const { from, to, empty } = editor.state.selection
   const text = editor.state.doc.textBetween(from, to, ' ').trim()
-
   if (empty || !text) return null
-
   return { text, from, to }
 }
 
 function resolveSelectionRange(editor, selectionContext = null) {
   if (!editor) return null
-
   const docSize = editor.state.doc.content.size
   const sourceText = normalizeComparableText(selectionContext?.text)
 
@@ -93,18 +75,14 @@ function resolveSelectionRange(editor, selectionContext = null) {
     const from = clampPosition(selectionContext.from, 1, docSize)
     const to = clampPosition(selectionContext.to, from, docSize)
     const currentText = normalizeComparableText(editor.state.doc.textBetween(from, to, ' '))
-
-    if (!sourceText || currentText === sourceText) {
-      return { from, to }
-    }
+    if (!sourceText || currentText === sourceText) return { from, to }
   }
 
-  if (selectionContext?.text) {
-    return findQuoteRange(editor.state.doc, selectionContext.text)
-  }
-
+  if (selectionContext?.text) return findQuoteRange(editor.state.doc, selectionContext.text)
   return null
 }
+
+/* ─── Toolbar primitives ─────────────────────────── */
 
 function ToolbarButton({ active, disabled, onClick, children, title }) {
   return (
@@ -112,7 +90,7 @@ function ToolbarButton({ active, disabled, onClick, children, title }) {
       type="button"
       title={title}
       disabled={disabled}
-      onMouseDown={(event) => event.preventDefault()}
+      onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       className={[styles.toolButton, active ? styles.toolButtonActive : ''].filter(Boolean).join(' ')}
     >
@@ -121,13 +99,28 @@ function ToolbarButton({ active, disabled, onClick, children, title }) {
   )
 }
 
+function ToolbarDivider() {
+  return <span className={styles.toolbarDivider} />
+}
+
+/* ─── SVG icon set ───────────────────────────────── */
+
+const Icons = {
+  Bold:        () => <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M6 4h8a4 4 0 0 1 0 8H6zm0 8h9a4 4 0 0 1 0 8H6z"/></svg>,
+  Italic:      () => <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M11 5h6v2h-2.5l-3 12H14v2H8v-2h2.5l3-12H11z"/></svg>,
+  Underline:   () => <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M6 3v8c0 3.3 2.7 6 6 6s6-2.7 6-6V3h-2v8c0 2.2-1.8 4-4 4s-4-1.8-4-4V3H6zm-2 17h16v2H4z"/></svg>,
+  Highlight:   () => <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M15.5 3.5L3.5 15.5l5 5L20.5 8.5l-5-5zm-7.3 14.7l-2.9-2.9L15 5.6l2.9 2.9-9.7 9.7zM3 21h3l-3-3v3z"/></svg>,
+  BulletList:  () => <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="4" cy="6" r="2"/><rect x="8" y="5" width="12" height="2"/><circle cx="4" cy="12" r="2"/><rect x="8" y="11" width="12" height="2"/><circle cx="4" cy="18" r="2"/><rect x="8" y="17" width="12" height="2"/></svg>,
+  OrderedList: () => <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M2 17h2v.5H3v1h1v.5H2v1h3v-4H2zm1-9h1V4H2v1h1zm-1 3h1.8L2 13.1v.9h3v-1H3.2L5 10.9V10H2zm5-6v2h14V5zm0 6v2h14v-2zm0 6v2h14v-2z"/></svg>,
+  Blockquote:  () => <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/></svg>,
+  Undo:        () => <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>,
+  Redo:        () => <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 15.7C5 12.52 7.95 10.2 11.5 10.2c1.96 0 3.73.72 5.12 1.88L13 15.5h9V7l-3.6 3.6z"/></svg>,
+}
+
+/* ─── Main component ─────────────────────────────── */
+
 export const DocumentEditor = forwardRef(function DocumentEditor(
-  {
-    value,
-    onChange,
-    onSubmitComment,
-    onAiAction,
-  },
+  { value, onChange, onSubmitComment, onAiAction },
   ref
 ) {
   const editorCanvasRef = useRef(null)
@@ -136,6 +129,7 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
   const commentComposerRef = useRef(null)
   const commentInputRef = useRef(null)
   const pointerSelectingRef = useRef(false)
+
   const [stableSelection, setStableSelection] = useState(null)
   const [selectionToolbarPosition, setSelectionToolbarPosition] = useState(null)
   const [commentComposerPosition, setCommentComposerPosition] = useState(null)
@@ -147,22 +141,17 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
     extensions: [
       StarterKit.configure({
         codeBlock: false,
-        heading: {
-          levels: [1, 2, 3],
-        },
+        heading: { levels: [1, 2, 3] },
       }),
-      Highlight.configure({
-        multicolor: false,
-      }),
+      Highlight.configure({ multicolor: false }),
+      Underline,
       Placeholder.configure({
-        placeholder: '在此撰写 PRD、需求说明与设计备注。你可以随时点击右下角 AI 助手，或选中文本后直接发起润色、扩写、总结。',
+        placeholder: '在此撰写 PRD、需求说明与设计备注。选中文字后可直接发起 AI 润色、扩写、总结。',
       }),
     ],
     content: value || '<p></p>',
     editorProps: {
-      attributes: {
-        class: styles.editorContent,
-      },
+      attributes: { class: styles.editorContent },
     },
     immediatelyRender: true,
     onUpdate: ({ editor: instance }) => {
@@ -174,14 +163,11 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
     editor,
     selector: ({ editor: instance }) => {
       if (!instance) return EMPTY_EDITOR_STATE
-
       const selection = instance.state.selection
       const selectedText = instance.state.doc.textBetween(selection.from, selection.to, ' ').trim()
-      const hasSelection = !selection.empty && Boolean(selectedText)
-
       return {
         selectedText,
-        hasSelection,
+        hasSelection: !selection.empty && Boolean(selectedText),
         isH1: instance.isActive('heading', { level: 1 }),
         isH2: instance.isActive('heading', { level: 2 }),
         isH3: instance.isActive('heading', { level: 3 }),
@@ -192,10 +178,12 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
         isBulletList: instance.isActive('bulletList'),
         isOrderedList: instance.isActive('orderedList'),
         isBlockquote: instance.isActive('blockquote'),
+        isCode: instance.isActive('code'),
       }
     },
   }) || EMPTY_EDITOR_STATE
 
+  /* ─── Sync external value ──────────────────────── */
   useEffect(() => {
     if (!editor) return
     const nextValue = value || '<p></p>'
@@ -203,6 +191,7 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
     editor.commands.setContent(nextValue, false)
   }, [editor, value])
 
+  /* ─── Selection tracking ───────────────────────── */
   useEffect(() => {
     if (!editor) return
 
@@ -213,9 +202,7 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
 
     const handlePointerDown = () => {
       pointerSelectingRef.current = true
-      if (!commentContext) {
-        setStableSelection(null)
-      }
+      if (!commentContext) setStableSelection(null)
     }
 
     const handlePointerUp = () => {
@@ -234,7 +221,6 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
     }
 
     const dom = editor.view.dom
-
     dom.addEventListener('pointerdown', handlePointerDown)
     window.addEventListener('pointerup', handlePointerUp)
     dom.addEventListener('keyup', handleKeyUp)
@@ -256,11 +242,10 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
   }, [commentContext])
 
   useEffect(() => {
-    if (commentContext || !stableSelection) {
-      setIsAiTrayOpen(false)
-    }
+    if (commentContext || !stableSelection) setIsAiTrayOpen(false)
   }, [commentContext, stableSelection])
 
+  /* ─── Floating UI positioning ──────────────────── */
   useEffect(() => {
     if (!editor || !editorCanvasRef.current) return
 
@@ -274,26 +259,12 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
       const tail = editor.view.coordsAtPos(tailPos)
       const useTailAnchor = Math.abs(tail.top - start.top) > 4
 
-      const anchorLeft = useTailAnchor
-        ? Math.min(tail.left, end.left)
-        : Math.min(start.left, end.left)
-      const anchorRight = useTailAnchor
-        ? Math.max(tail.right, end.right)
-        : Math.max(start.right, end.right)
-      const anchorTop = useTailAnchor
-        ? Math.min(tail.top, end.top)
-        : Math.min(start.top, end.top)
-      const anchorBottom = useTailAnchor
-        ? Math.max(tail.bottom, end.bottom)
-        : Math.max(start.bottom, end.bottom)
+      const anchorLeft   = useTailAnchor ? Math.min(tail.left, end.left)     : Math.min(start.left, end.left)
+      const anchorRight  = useTailAnchor ? Math.max(tail.right, end.right)   : Math.max(start.right, end.right)
+      const anchorTop    = useTailAnchor ? Math.min(tail.top, end.top)       : Math.min(start.top, end.top)
+      const anchorBottom = useTailAnchor ? Math.max(tail.bottom, end.bottom) : Math.max(start.bottom, end.bottom)
 
-      return {
-        left: anchorLeft,
-        right: anchorRight,
-        top: anchorTop,
-        bottom: anchorBottom,
-        centerX: (anchorLeft + anchorRight) / 2,
-      }
+      return { left: anchorLeft, right: anchorRight, top: anchorTop, bottom: anchorBottom, centerX: (anchorLeft + anchorRight) / 2 }
     }
 
     const getFloatingRect = (selectionContext, element, fallback, placement = 'top') => {
@@ -301,10 +272,10 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
       if (!metrics || !element) return null
 
       const hostRect = editorCanvasRef.current.getBoundingClientRect()
-      const width = element.offsetWidth || fallback.width
+      const width  = element.offsetWidth  || fallback.width
       const height = element.offsetHeight || fallback.height
       const margin = 12
-      const gap = 10
+      const gap    = 10
 
       let left = clampPosition(
         metrics.left - hostRect.left - 8,
@@ -316,17 +287,9 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
         ? metrics.bottom - hostRect.top + gap
         : metrics.top - hostRect.top - height - gap
 
-      if (placement === 'top' && top < margin) {
-        top = metrics.bottom - hostRect.top + gap
-      }
-
-      if (placement === 'bottom' && top + height > hostRect.height - margin) {
-        top = metrics.top - hostRect.top - height - gap
-      }
-
-      if (top + height > hostRect.height - margin) {
-        top = Math.max(margin, hostRect.height - height - margin)
-      }
+      if (placement === 'top'    && top < margin) top = metrics.bottom - hostRect.top + gap
+      if (placement === 'bottom' && top + height > hostRect.height - margin) top = metrics.top - hostRect.top - height - gap
+      if (top + height > hostRect.height - margin) top = Math.max(margin, hostRect.height - height - margin)
 
       return { left, top }
     }
@@ -346,7 +309,7 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
           ? getFloatingRect(
               stableSelection,
               selectionToolbarRef.current,
-              { width: 248, height: isAiTrayOpen ? 88 : 42 },
+              { width: 260, height: isAiTrayOpen ? 88 : 42 },
               'top'
             )
           : null
@@ -363,89 +326,63 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
       scrollHost?.removeEventListener('scroll', syncFloatingUi)
       window.removeEventListener('resize', syncFloatingUi)
     }
-  }, [commentContext, editor, stableSelection, commentDraft, isAiTrayOpen])
+  }, [commentContext, editor, stableSelection, isAiTrayOpen])
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      focus: () => {
-        if (!editor) return false
-        editor.commands.focus()
+  /* ─── Imperative handle ────────────────────────── */
+  useImperativeHandle(ref, () => ({
+    focus: () => { editor?.commands.focus(); return true },
+    getHTML: () => editor?.getHTML() || '',
+    getPlainText: () => editor?.getText() || '',
+    getSelectionContext: () => {
+      if (!editor) return null
+      const { from, to, empty } = editor.state.selection
+      const text = editor.state.doc.textBetween(from, to, ' ').trim()
+      if (empty || !text) return null
+      return { text, from, to }
+    },
+    applyAiResult: (mode, text, selectionContext = null) => {
+      if (!editor || !text?.trim()) return false
+      const html = plainTextToHtml(text)
+
+      if (mode === 'replace-selection') {
+        const range = resolveSelectionRange(editor, selectionContext)
+        if (!range) return { ok: false, reason: 'selection-changed' }
+        editor.chain().focus().insertContentAt(range, html).run()
+        return { ok: true }
+      }
+      if (mode === 'insert-at-cursor') {
+        editor.chain().focus().insertContent(html).run()
+        return { ok: true }
+      }
+      if (mode === 'append-to-end') {
+        editor.chain().focus().insertContentAt(editor.state.doc.content.size, html).run()
+        return { ok: true }
+      }
+      return { ok: false, reason: 'unsupported-mode' }
+    },
+    locateComment: (comment) => {
+      if (!editor) return false
+      if (typeof comment?.anchorOffset === 'number') {
+        const from = clampPosition(comment.anchorOffset, 1, editor.state.doc.content.size)
+        const to   = clampPosition(comment?.selectionTo || from, from, editor.state.doc.content.size)
+        editor.chain().focus().setTextSelection({ from, to }).run()
         return true
-      },
-      getHTML: () => editor?.getHTML() || '',
-      getPlainText: () => editor?.getText() || '',
-      getSelectionContext: () => {
-        if (!editor) return null
-        const { from, to, empty } = editor.state.selection
-        const text = editor.state.doc.textBetween(from, to, ' ').trim()
-
-        if (empty || !text) return null
-
-        return { text, from, to }
-      },
-      applyAiResult: (mode, text, selectionContext = null) => {
-        if (!editor || !text?.trim()) return false
-
-        const html = plainTextToHtml(text)
-
-        if (mode === 'replace-selection') {
-          const range = resolveSelectionRange(editor, selectionContext)
-          if (!range) {
-            return {
-              ok: false,
-              reason: 'selection-changed',
-            }
-          }
-
-          editor
-            .chain()
-            .focus()
-            .insertContentAt(range, html)
-            .run()
-          return { ok: true }
-        }
-
-        if (mode === 'insert-at-cursor') {
-          editor.chain().focus().insertContent(html).run()
-          return { ok: true }
-        }
-
-        if (mode === 'append-to-end') {
-          editor.chain().focus().insertContentAt(editor.state.doc.content.size, html).run()
-          return { ok: true }
-        }
-
-        return { ok: false, reason: 'unsupported-mode' }
-      },
-      locateComment: (comment) => {
-        if (!editor) return false
-
-        if (typeof comment?.anchorOffset === 'number') {
-          const from = clampPosition(comment.anchorOffset, 1, editor.state.doc.content.size)
-          const to = clampPosition(comment?.selectionTo || from, from, editor.state.doc.content.size)
-          editor.chain().focus().setTextSelection({ from, to }).run()
-          return true
-        }
-
-        const quoteRange = findQuoteRange(editor.state.doc, comment?.quote)
-        if (quoteRange) {
-          editor.chain().focus().setTextSelection(quoteRange).run()
-          return true
-        }
-
-        return false
-      },
-    }),
-    [editor]
-  )
+      }
+      const quoteRange = findQuoteRange(editor.state.doc, comment?.quote)
+      if (quoteRange) {
+        editor.chain().focus().setTextSelection(quoteRange).run()
+        return true
+      }
+      return false
+    },
+  }), [editor])
 
   if (!editor) return null
 
+  /* ─── Handlers ─────────────────────────────────── */
   const handleOpenCommentComposer = () => {
     const snapshot = stableSelection || getSelectionSnapshot(editor)
     if (!snapshot) return
-
     setIsAiTrayOpen(false)
     setCommentDraft('')
     setCommentContext(snapshot)
@@ -455,28 +392,17 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
   const handleAiAction = (action) => {
     const snapshot = stableSelection || getSelectionSnapshot(editor)
     if (!snapshot) return
-
     setIsAiTrayOpen(false)
-    onAiAction?.(action, {
-      action,
-      text: snapshot.text,
-      from: snapshot.from,
-      to: snapshot.to,
-    })
+    onAiAction?.(action, { action, text: snapshot.text, from: snapshot.from, to: snapshot.to })
   }
 
   const handleSubmitComment = () => {
     if (!commentContext || !commentDraft.trim()) return
-
     onSubmitComment?.({
       quote: commentContext.text,
-      selection: {
-        from: commentContext.from,
-        to: commentContext.to,
-      },
+      selection: { from: commentContext.from, to: commentContext.to },
       text: commentDraft.trim(),
     })
-
     setCommentDraft('')
     setStableSelection(commentContext)
     setCommentContext(null)
@@ -490,161 +416,150 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
     editor.commands.focus()
   }
 
+  /* ─── Selection toolbar render ─────────────────── */
   const renderSelectionToolbar = (className, style) => (
-    <div
-      ref={selectionToolbarRef}
-      className={className}
-      style={style}
-    >
+    <div ref={selectionToolbarRef} className={className} style={style}>
       <button
         type="button"
         className={styles.selectionCommentButton}
-        onMouseDown={(event) => event.preventDefault()}
+        onMouseDown={(e) => e.preventDefault()}
         onClick={handleOpenCommentComposer}
       >
-        添加注释
+        注释
       </button>
       <span className={styles.selectionToolbarDivider} />
       <button
         type="button"
         className={styles.selectionToolbarPrimary}
-        onMouseDown={(event) => event.preventDefault()}
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => handleAiAction(PRIMARY_SELECTION_ACTION.key)}
       >
-        AI 润色
+        {PRIMARY_SELECTION_ACTION.icon} AI 润色
       </button>
       <button
         type="button"
         className={styles.selectionToolbarButton}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={() => setIsAiTrayOpen((current) => !current)}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setIsAiTrayOpen((v) => !v)}
       >
-        {isAiTrayOpen ? '收起' : '更多 AI'}
+        {isAiTrayOpen ? '▲' : '更多 ▾'}
       </button>
-      {isAiTrayOpen ? (
+      {isAiTrayOpen && (
         <div className={styles.selectionAiTray}>
           {SECONDARY_SELECTION_ACTIONS.map((action) => (
             <button
               key={action.key}
               type="button"
               className={styles.selectionToolbarButton}
-              onMouseDown={(event) => event.preventDefault()}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleAiAction(action.key)}
             >
-              {action.label}
+              {action.icon} {action.label}
             </button>
           ))}
         </div>
-      ) : null}
+      )}
     </div>
   )
 
+  /* ─── Render ────────────────────────────────────── */
   return (
     <div className={styles.wrapper}>
       <div className={styles.shell}>
+
+        {/* ── Toolbar ── */}
         <div className={styles.toolbar}>
           <div className={styles.toolbarGroup}>
-            <ToolbarButton
-              title="标题 1"
-              active={editorState.isH1}
-              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            >
+            <ToolbarButton title="标题 1" active={editorState.isH1}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
               H1
             </ToolbarButton>
-            <ToolbarButton
-              title="标题 2"
-              active={editorState.isH2}
-              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            >
+            <ToolbarButton title="标题 2" active={editorState.isH2}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
               H2
             </ToolbarButton>
-            <ToolbarButton
-              title="标题 3"
-              active={editorState.isH3}
-              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-            >
+            <ToolbarButton title="标题 3" active={editorState.isH3}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
               H3
             </ToolbarButton>
           </div>
 
+          <ToolbarDivider />
+
           <div className={styles.toolbarGroup}>
-            <ToolbarButton
-              title="加粗"
-              active={editorState.isBold}
-              onClick={() => editor.chain().focus().toggleBold().run()}
-            >
-              B
+            <ToolbarButton title="加粗 (⌘B)" active={editorState.isBold}
+              onClick={() => editor.chain().focus().toggleBold().run()}>
+              <Icons.Bold />
             </ToolbarButton>
-            <ToolbarButton
-              title="斜体"
-              active={editorState.isItalic}
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-            >
-              I
+            <ToolbarButton title="斜体 (⌘I)" active={editorState.isItalic}
+              onClick={() => editor.chain().focus().toggleItalic().run()}>
+              <Icons.Italic />
             </ToolbarButton>
-            <ToolbarButton
-              title="下划线"
-              active={editorState.isUnderline}
-              onClick={() => editor.chain().focus().toggleUnderline().run()}
-            >
-              U
+            <ToolbarButton title="下划线 (⌘U)" active={editorState.isUnderline}
+              onClick={() => editor.chain().focus().toggleUnderline().run()}>
+              <Icons.Underline />
             </ToolbarButton>
-            <ToolbarButton
-              title="高亮"
-              active={editorState.isHighlight}
-              onClick={() => editor.chain().focus().toggleHighlight().run()}
-            >
-              Mark
+            <ToolbarButton title="高亮" active={editorState.isHighlight}
+              onClick={() => editor.chain().focus().toggleHighlight().run()}>
+              <Icons.Highlight />
             </ToolbarButton>
           </div>
 
+          <ToolbarDivider />
+
           <div className={styles.toolbarGroup}>
-            <ToolbarButton
-              title="无序列表"
-              active={editorState.isBulletList}
-              onClick={() => editor.chain().focus().toggleBulletList().run()}
-            >
-              • List
+            <ToolbarButton title="无序列表" active={editorState.isBulletList}
+              onClick={() => editor.chain().focus().toggleBulletList().run()}>
+              <Icons.BulletList />
             </ToolbarButton>
-            <ToolbarButton
-              title="有序列表"
-              active={editorState.isOrderedList}
-              onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            >
-              1. List
+            <ToolbarButton title="有序列表" active={editorState.isOrderedList}
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+              <Icons.OrderedList />
             </ToolbarButton>
-            <ToolbarButton
-              title="引用"
-              active={editorState.isBlockquote}
-              onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            >
-              Quote
+            <ToolbarButton title="引用块" active={editorState.isBlockquote}
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+              <Icons.Blockquote />
             </ToolbarButton>
           </div>
 
+          <ToolbarDivider />
+
+          <div className={styles.toolbarGroup}>
+            <ToolbarButton title="撤销 (⌘Z)"
+              onClick={() => editor.chain().focus().undo().run()}>
+              <Icons.Undo />
+            </ToolbarButton>
+            <ToolbarButton title="重做 (⌘⇧Z)"
+              onClick={() => editor.chain().focus().redo().run()}>
+              <Icons.Redo />
+            </ToolbarButton>
+          </div>
         </div>
 
+        {/* ── Editor canvas ── */}
         <div className={styles.editorCanvas} ref={editorCanvasRef}>
           <div className={styles.editorSurface} ref={editorSurfaceRef}>
             <EditorContent editor={editor} />
           </div>
 
-          {stableSelection && selectionToolbarPosition && !commentContext ? (
-            renderSelectionToolbar(styles.selectionToolbar, {
-              left: `${selectionToolbarPosition.left}px`,
-              top: `${selectionToolbarPosition.top}px`,
-            })
-          ) : stableSelection && !commentContext ? (
-            renderSelectionToolbar(styles.selectionToolbarMeasure)
-          ) : null}
+          {/* Selection toolbar */}
+          {stableSelection && selectionToolbarPosition && !commentContext
+            ? renderSelectionToolbar(styles.selectionToolbar, {
+                left: `${selectionToolbarPosition.left}px`,
+                top:  `${selectionToolbarPosition.top}px`,
+              })
+            : stableSelection && !commentContext
+            ? renderSelectionToolbar(styles.selectionToolbarMeasure)
+            : null}
 
+          {/* Comment composer */}
           {commentContext && commentComposerPosition ? (
             <div
               ref={commentComposerRef}
               className={styles.commentComposerPopover}
               style={{
                 left: `${commentComposerPosition.left}px`,
-                top: `${commentComposerPosition.top}px`,
+                top:  `${commentComposerPosition.top}px`,
               }}
             >
               <div className={styles.commentComposerHeader}>
@@ -653,44 +568,26 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
                   <strong>添加注释</strong>
                   <span>{truncateText(commentContext.text, 28)}</span>
                 </div>
-                <button type="button" className={styles.commentClose} onClick={closeCommentComposer}>
-                  关闭
-                </button>
+                <button type="button" className={styles.commentClose} onClick={closeCommentComposer}>✕</button>
               </div>
               <textarea
                 ref={commentInputRef}
                 className={styles.commentInput}
                 rows={2}
                 value={commentDraft}
-                onChange={(event) => setCommentDraft(event.target.value)}
-                placeholder="添加评论..."
+                onChange={(e) => setCommentDraft(e.target.value)}
+                placeholder="添加评论…"
               />
               <div className={styles.commentActions}>
-                <button
-                  type="button"
-                  className={styles.commentGhost}
-                  onClick={closeCommentComposer}
-                >
-                  取消
-                </button>
-                <button
-                  type="button"
-                  className={styles.commentSubmit}
-                  onClick={handleSubmitComment}
-                  disabled={!commentDraft.trim()}
-                >
-                  发送
-                </button>
+                <button type="button" className={styles.commentGhost} onClick={closeCommentComposer}>取消</button>
+                <button type="button" className={styles.commentSubmit} onClick={handleSubmitComment} disabled={!commentDraft.trim()}>发送</button>
               </div>
             </div>
           ) : commentContext ? (
             <div ref={commentComposerRef} className={styles.commentComposerMeasure}>
               <div className={styles.commentComposerHeader}>
                 <div className={styles.commentAvatar}>注</div>
-                <div className={styles.commentMeta}>
-                  <strong>添加注释</strong>
-                  <span>{truncateText(commentContext.text, 28)}</span>
-                </div>
+                <div className={styles.commentMeta}><strong>添加注释</strong><span>{truncateText(commentContext.text, 28)}</span></div>
               </div>
               <textarea className={styles.commentInput} rows={2} value="" readOnly />
             </div>

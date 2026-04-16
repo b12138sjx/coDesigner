@@ -1,67 +1,46 @@
 .page {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
+  background: var(--color-bg);
 }
 
+/* ────────────────────────────────────────────────
+   Header
+──────────────────────────────────────────────── */
 .header {
   flex-shrink: 0;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--color-border);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  padding: 0 20px;
+  height: 56px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
   gap: 14px;
-}
-
-.headerMain {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.header h1 {
-  font-size: 1.25rem;
-  margin: 0 0 4px 0;
-}
-
-.header p {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-}
-
-.fileActions {
-  display: flex;
-  gap: 8px;
-}
-
-.fileActions button {
-  height: 32px;
-  padding: 0 11px;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-input-bg);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.fileActions button:hover {
-  color: var(--color-text);
-  border-color: var(--color-primary);
+  min-width: 0;
 }
 
 .backButton {
-  height: 30px;
+  flex-shrink: 0;
+  height: 32px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1px solid var(--color-border);
-  background: var(--color-input-bg);
+  background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
+  font-size: 0.84rem;
+  white-space: nowrap;
+  transition: color 0.14s, border-color 0.14s;
 }
 
 .backButton:hover {
@@ -69,119 +48,205 @@
   border-color: var(--color-primary);
 }
 
-.fileTip {
-  margin: 8px 24px 0;
-  color: var(--color-text-muted);
-  font-size: 0.82rem;
-}
-
-.body {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.workspace {
-  flex: 1;
-  min-height: 0;
+.headerInfo {
   min-width: 0;
-  display: flex;
-  align-items: stretch;
-  gap: 16px;
-}
-
-.editorWrap {
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  padding: 16px 0 16px 16px;
-  overflow: auto;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--color-border);
+  gap: 2px;
 }
 
-.editorWrap > * {
-  flex: 1;
-  min-height: 400px;
+.title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+  white-space: nowrap;
 }
 
-.assistantRail {
-  width: min(332px, 31vw);
-  min-width: 300px;
-  padding: 16px 16px 16px 0;
+.meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headerRight {
   display: flex;
-  min-height: 0;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
-.assistantRail > * {
-  flex: 1;
-  min-height: 0;
+.fileTip {
+  font-size: 0.82rem;
+  color: #86efac;
+  white-space: nowrap;
+  animation: fadeIn 0.2s ease;
 }
 
-.previewRail {
-  width: 340px;
-  min-width: 300px;
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.fileActions {
   display: flex;
-  min-height: 0;
+  gap: 6px;
 }
 
-.previewRail > * {
+.fileActions button {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  transition: color 0.14s, border-color 0.14s, background 0.14s;
+}
+
+.fileActions button:hover {
+  color: var(--color-text);
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+/* ────────────────────────────────────────────────
+   Body: left editor | right panel
+──────────────────────────────────────────────── */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Left: editor pane ── */
+.editorPane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 16px 16px 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.editorPane > * {
   flex: 1;
   min-height: 0;
 }
 
-@media (max-width: 1380px) {
-  .workspace {
-    flex-direction: column;
-    gap: 0;
-  }
+/* ── Right: preview / AI panel ── */
+.rightPane {
+  width: 420px;
+  flex-shrink: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
 
-  .editorWrap {
-    padding: 16px 16px 0;
-  }
+/* ── Tab bar ── */
+.tabBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 16px;
+  height: 44px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
 
-  .assistantRail {
-    width: auto;
-    min-width: 0;
-    padding: 0 16px 16px;
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: color 0.14s, border-color 0.14s;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+.tabActive {
+  color: var(--color-text);
+  border-bottom-color: var(--color-primary);
+}
+
+.tabBadge {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(1.2); }
+}
+
+.rightPaneBody {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.rightPaneBody > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ────────────────────────────────────────────────
+   Responsive
+──────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .rightPane {
+    width: 360px;
   }
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 900px) {
   .body {
     flex-direction: column;
   }
 
-  .previewRail {
+  .rightPane {
     width: auto;
-    min-width: 0;
+    height: 50%;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .editorPane {
+    height: 50%;
+    padding: 12px;
   }
 }
 
-@media (max-width: 880px) {
+@media (max-width: 640px) {
   .header {
-    padding: 16px;
-    flex-direction: column;
+    padding: 0 12px;
+    height: 52px;
   }
 
-  .fileActions {
-    flex-wrap: wrap;
-  }
+  .headerInfo .meta { display: none; }
 
-  .body {
-    flex-direction: column;
-  }
-
-  .editorWrap {
-    padding: 12px 12px 0;
-  }
-
-  .assistantRail {
-    padding: 0 12px 12px;
-  }
-
-  .previewRail {
-    width: auto;
-  }
+  .fileActions button { padding: 0 8px; font-size: 0.78rem; }
 }
