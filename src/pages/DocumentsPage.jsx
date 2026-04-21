@@ -2,6 +2,8 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useProjectStore } from '@/stores/projectStore'
 import { useDocumentStore, createComment } from '@/stores/documentStore'
+import { DocumentCommentsPanel } from '@/components/DocumentComments/DocumentCommentsPanel'
+import { DocumentCommentConnectors } from '@/components/DocumentComments/DocumentCommentConnectors'
 import { useDocumentAiStore, createAiMessage, createEmptyAiSession } from '@/stores/documentAiStore'
 import { DocumentEditor } from '@/components/DocumentEditor/DocumentEditor'
 import { DocumentAiPanel } from '@/components/DocumentAI/DocumentAiPanel'
@@ -18,6 +20,10 @@ import { truncateText } from '@/utils/documentContent'
 import styles from './DocumentsPage.module.css'
 
 const EMPTY_DOC = { content: '<p></p>', contentFormat: 'html', comments: [] }
+
+const DOCS_RIGHT_PANE_KEY = 'codesigner-documents-right-pane-w'
+const DOCS_RIGHT_PANE_MIN = 280
+const DOCS_RIGHT_PANE_MAX = 720
 
 const ACTION_LABELS = {
   polish:    '润色',
@@ -39,7 +45,9 @@ export function DocumentsPage() {
   )
   const setContent      = useDocumentStore((state) => state.setContent)
   const setDocByProject = useDocumentStore((state) => state.setDocByProject)
-  const addComment      = useDocumentStore((state) => state.addComment)
+  const addComment            = useDocumentStore((state) => state.addComment)
+  const removeComment         = useDocumentStore((state) => state.removeComment)
+  const toggleCommentResolved = useDocumentStore((state) => state.toggleCommentResolved)
 
   const aiSessions       = useDocumentAiStore((state) => state.sessions)
   const ensureAiSession  = useDocumentAiStore((state) => state.ensureSession)
@@ -50,10 +58,36 @@ export function DocumentsPage() {
   const setResultPreview = useDocumentAiStore((state) => state.setResultPreview)
 
   const [fileTip, setFileTip]         = useState('')
-  const [rightTab, setRightTab]       = useState('preview') // 'preview' | 'ai'
+  const [rightTab, setRightTab]       = useState('preview') // 'preview' | 'comments' | 'ai'
 
-  const editorRef    = useRef(null)
-  const tipTimerRef  = useRef(null)
+  const [rightPaneWidth, setRightPaneWidth] = useState(() => {
+    if (typeof window === 'undefined') return 420
+    try {
+      const v = Number(sessionStorage.getItem(DOCS_RIGHT_PANE_KEY))
+      if (Number.isFinite(v) && v >= DOCS_RIGHT_PANE_MIN && v <= DOCS_RIGHT_PANE_MAX) return v
+    } catch {
+      /* ignore */
+    }
+    return 420
+  })
+
+  const [wideLayout, setWideLayout] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 901px)').matches
+  )
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(min-width: 901px)')
+    const onChange = () => setWideLayout(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  const editorRef = useRef(null)
+  const bodyRef = useRef(null)
+  const tipTimerRef = useRef(null)
+  const rightPaneWidthRef = useRef(rightPaneWidth)
+  rightPaneWidthRef.current = rightPaneWidth
 
   const content        = doc?.content ?? '<p></p>'
   const contentFormat  = doc?.contentFormat ?? 'html'
@@ -150,7 +184,62 @@ export function DocumentsPage() {
       selectionTo:  typeof selection?.to   === 'number' ? selection.to   : null,
     }))
     showTip('注释已添加')
+    setRightTab('comments')
   }, [addComment, projectId, showTip])
+
+  const handleLocateComment = useCallback(
+    (comment) => {
+      const ok = editorRef.current?.locateComment?.(comment)
+      showTip(ok ? '已定位到选区' : '无法在文中定位，原文可能已变化')
+    },
+    [showTip]
+  )
+
+  const handleRemoveComment = useCallback(
+    (commentId) => {
+      if (!projectId) return
+      removeComment(projectId, commentId)
+      showTip('注释已删除')
+    },
+    [projectId, removeComment, showTip]
+  )
+
+  const handleToggleCommentResolved = useCallback(
+    (commentId) => {
+      if (!projectId) return
+      toggleCommentResolved(projectId, commentId)
+    },
+    [projectId, toggleCommentResolved]
+  )
+
+  const handlePaneResizeStart = useCallback(
+    (event) => {
+      if (!wideLayout) return
+      event.preventDefault()
+      const startX = event.clientX
+      const startW = rightPaneWidthRef.current
+
+      const onMove = (ev) => {
+        const delta = startX - ev.clientX
+        const next = Math.min(DOCS_RIGHT_PANE_MAX, Math.max(DOCS_RIGHT_PANE_MIN, startW + delta))
+        setRightPaneWidth(next)
+      }
+
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onUp)
+        try {
+          sessionStorage.setItem(DOCS_RIGHT_PANE_KEY, String(rightPaneWidthRef.current))
+        } catch {
+          /* ignore */
+        }
+      }
+
+      window.addEventListener('mousemove', onMove)
+      window.addEventListener('mouseup', onUp)
+    },
+    [wideLayout]
+  )
 
   /* ─── Free-form AI chat ──────────────────────── */
   const handleSendAiMessage = useCallback(async (inputText) => {
@@ -252,9 +341,8 @@ export function DocumentsPage() {
         </div>
       </header>
 
-      {/* ── Body: left editor | right panel ── */}
-      <div className={styles.body}>
-
+      {/* ── Body: left editor | right panel（注释 Tab 下显示 Figma 式连接线） ── */}
+      <div className={styles.body} ref={bodyRef}>
         {/* Left: Editor */}
         <div className={styles.editorPane}>
           <DocumentEditor
@@ -266,8 +354,21 @@ export function DocumentsPage() {
           />
         </div>
 
-        {/* Right: Preview / AI tabs */}
-        <div className={styles.rightPane}>
+        {wideLayout ? (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="调整右侧栏宽度"
+            className={styles.paneResizer}
+            onMouseDown={handlePaneResizeStart}
+          />
+        ) : null}
+
+        {/* Right: Preview / Comments / AI */}
+        <div
+          className={styles.rightPane}
+          style={wideLayout ? { width: rightPaneWidth, flex: 'none' } : undefined}
+        >
           <div className={styles.tabBar}>
             <button
               type="button"
@@ -275,6 +376,16 @@ export function DocumentsPage() {
               onClick={() => setRightTab('preview')}
             >
               预览
+            </button>
+            <button
+              type="button"
+              className={[styles.tab, rightTab === 'comments' ? styles.tabActive : ''].join(' ')}
+              onClick={() => setRightTab('comments')}
+            >
+              注释
+              {comments.length > 0 ? (
+                <span className={styles.tabCount}>{comments.length}</span>
+              ) : null}
             </button>
             <button
               type="button"
@@ -294,6 +405,14 @@ export function DocumentsPage() {
                 content={content}
                 comments={comments}
                 projectName={project?.name}
+              />
+            ) : rightTab === 'comments' ? (
+              <DocumentCommentsPanel
+                comments={comments}
+                projectName={project?.name}
+                onLocateComment={handleLocateComment}
+                onToggleResolved={handleToggleCommentResolved}
+                onRemove={handleRemoveComment}
               />
             ) : (
               <DocumentAiPanel
@@ -316,6 +435,16 @@ export function DocumentsPage() {
             )}
           </div>
         </div>
+
+        {rightTab === 'comments' && comments.length > 0 ? (
+          <DocumentCommentConnectors
+            bodyRef={bodyRef}
+            editorRef={editorRef}
+            comments={comments}
+            visible
+            contentKey={content}
+          />
+        ) : null}
 
       </div>
     </div>

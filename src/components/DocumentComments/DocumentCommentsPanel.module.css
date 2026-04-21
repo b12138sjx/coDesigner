@@ -1,0 +1,148 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface);
+  min-height: 0;
+}
+
+.header {
+  flex-shrink: 0;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.kicker {
+  margin: 0 0 4px;
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.header h3 {
+  margin: 0 0 3px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+}
+
+.empty p {
+  margin: 0 0 6px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.empty span {
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.card {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  transition: opacity 0.15s ease;
+}
+
+.cardResolved {
+  opacity: 0.65;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.time {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.linkBtn,
+.dangerBtn {
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.linkBtn:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.dangerBtn {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.dangerBtn:hover {
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.quote {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--color-primary);
+  background: rgba(59, 130, 246, 0.06);
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.bodyText {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.footer {
+  flex-shrink: 0;
+  padding: 10px 18px 12px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}

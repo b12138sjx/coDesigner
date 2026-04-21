@@ -1,3 +1,4 @@
+import { useUiStore } from '@/stores/uiStore'
 import { stripHtml } from '@/utils/documentContent'
 import styles from './DocumentPreviewPanel.module.css'
 
@@ -10,9 +11,11 @@ export function DocumentPreviewPanel({
   comments = [],
   projectName,
 }) {
+  const theme = useUiStore((state) => state.theme)
   const plainText = stripHtml(content)
   const textCount = getTextCount(content)
   const hasContent = Boolean(plainText)
+  const previewClass = theme === 'light' ? styles.previewLight : styles.previewDark
 
   return (
     <aside className={styles.panel}>
@@ -29,7 +32,7 @@ export function DocumentPreviewPanel({
       <div className={styles.body}>
         {hasContent ? (
           <article
-            className={styles.preview}
+            className={[styles.preview, previewClass].join(' ')}
             dangerouslySetInnerHTML={{ __html: content }}
           />
         ) : (

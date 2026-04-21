@@ -62,6 +62,15 @@ function getSelectionSnapshot(editor) {
   return { text, from, to }
 }
 
+function mergeCoordsRect(a, b) {
+  return {
+    left: Math.min(a.left, b.left),
+    top: Math.min(a.top, b.top),
+    right: Math.max(a.right, b.right),
+    bottom: Math.max(a.bottom, b.bottom),
+  }
+}
+
 function resolveSelectionRange(editor, selectionContext = null) {
   if (!editor) return null
   const docSize = editor.state.doc.content.size
@@ -374,6 +383,63 @@ export const DocumentEditor = forwardRef(function DocumentEditor(
         return true
       }
       return false
+    },
+    /**
+     * 视口坐标系下的选区包围盒（如需按矩形展示时使用）。
+     */
+    getCommentAnchorRect: (comment) => {
+      if (!editor) return null
+      const docSize = editor.state.doc.content.size
+      let from
+      let to
+      if (typeof comment?.anchorOffset === 'number') {
+        from = clampPosition(comment.anchorOffset, 1, docSize)
+        to = clampPosition(comment?.selectionTo || from, from, docSize)
+      } else {
+        const quoteRange = findQuoteRange(editor.state.doc, comment?.quote)
+        if (!quoteRange) return null
+        from = quoteRange.from
+        to = quoteRange.to
+      }
+      if (to <= from) return null
+      try {
+        const view = editor.view
+        const cFrom = view.coordsAtPos(from)
+        const endPos = Math.max(from, Math.min(to - 1, docSize - 1))
+        const cEnd = view.coordsAtPos(endPos)
+        return mergeCoordsRect(cFrom, cEnd)
+      } catch {
+        return null
+      }
+    },
+    /**
+     * 注释连线终点：选区最后一个字符的中心（视口坐标），靠近正文末尾、侧栏一侧，观感更自然。
+     */
+    getCommentConnectorPoint: (comment) => {
+      if (!editor) return null
+      const docSize = editor.state.doc.content.size
+      let from
+      let to
+      if (typeof comment?.anchorOffset === 'number') {
+        from = clampPosition(comment.anchorOffset, 1, docSize)
+        to = clampPosition(comment?.selectionTo || from, from, docSize)
+      } else {
+        const quoteRange = findQuoteRange(editor.state.doc, comment?.quote)
+        if (!quoteRange) return null
+        from = quoteRange.from
+        to = quoteRange.to
+      }
+      if (to <= from) return null
+      const endPos = Math.max(from, Math.min(to - 1, docSize - 1))
+      try {
+        const c = editor.view.coordsAtPos(endPos, 1)
+        return {
+          x: (c.left + c.right) / 2,
+          y: (c.top + c.bottom) / 2,
+        }
+      } catch {
+        return null
+      }
     },
   }), [editor])
 

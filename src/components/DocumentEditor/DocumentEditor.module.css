@@ -207,6 +207,50 @@
   margin: 2em 0;
 }
 
+/* 日间模式：文档正文与标题为黑色（避免沿用夜间主题的浅色字） */
+:root[data-theme='light'] .editorContent {
+  color: #000000;
+}
+
+:root[data-theme='light'] .editorContent :global(h1) {
+  color: #000000;
+}
+
+:root[data-theme='light'] .editorContent :global(h2) {
+  color: #000000;
+}
+
+:root[data-theme='light'] .editorContent :global(h3) {
+  color: #000000;
+}
+
+:root[data-theme='light'] .editorContent :global(p),
+:root[data-theme='light'] .editorContent :global(li) {
+  color: #000000;
+}
+
+:root[data-theme='light'] .editorContent :global(blockquote) {
+  color: #171717;
+}
+
+:root[data-theme='light'] .editorContent :global(code) {
+  color: #000000;
+  background: rgba(15, 23, 42, 0.06);
+  border-color: var(--color-border);
+}
+
+:root[data-theme='light'] .editorContent :global(strong) {
+  color: #000000;
+}
+
+:root[data-theme='light'] .editorContent :global(em) {
+  color: #262626;
+}
+
+:root[data-theme='light'] .editorContent :global(.is-editor-empty:first-child::before) {
+  color: #64748b;
+}
+
 /* ────────────────────────────────────────────────
    Selection toolbar (floating)
 ──────────────────────────────────────────────── */
