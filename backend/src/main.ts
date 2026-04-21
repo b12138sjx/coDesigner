@@ -2,6 +2,7 @@
 import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
+import { ProjectSyncService } from './projects/project-sync.service'
 
 function parseCorsOrigins() {
   const raw = process.env.CORS_ORIGIN || 'http://localhost:5173'
@@ -13,6 +14,7 @@ function parseCorsOrigins() {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
+  const syncService = app.get(ProjectSyncService)
 
   app.setGlobalPrefix('api/v1')
   app.useGlobalPipes(
@@ -28,8 +30,11 @@ async function bootstrap() {
     credentials: true,
   })
 
+  syncService.attach(app.getHttpServer())
+
   const port = Number(process.env.PORT || 3000)
-  await app.listen(port)
+  const host = process.env.HOST || '0.0.0.0'
+  await app.listen(port, host)
 }
 
 bootstrap()

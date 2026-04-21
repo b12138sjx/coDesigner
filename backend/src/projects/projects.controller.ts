@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common'
 import { AccessTokenGuard } from '../auth/access-token.guard'
 import { AuthenticatedRequest } from '../auth/auth.types'
+import { AddProjectMemberDto } from './dto/add-project-member.dto'
 import { CreateProjectDto } from './dto/create-project.dto'
 import { ImportLocalProjectsDto } from './dto/import-local-projects.dto'
 import { PutProjectCanvasDto } from './dto/put-project-canvas.dto'
@@ -70,6 +71,24 @@ export class ProjectsController {
     @Body() dto: PutProjectCanvasDto
   ) {
     return this.projectsService.putProjectCanvas(this.getUserId(req), projectId, dto)
+  }
+
+  @Post(':projectId/members')
+  addMember(
+    @Req() req: AuthenticatedRequest,
+    @Param('projectId') projectId: string,
+    @Body() dto: AddProjectMemberDto
+  ) {
+    return this.projectsService.addProjectMember(this.getUserId(req), projectId, dto)
+  }
+
+  @Delete(':projectId/members/:memberUserId')
+  removeMember(
+    @Req() req: AuthenticatedRequest,
+    @Param('projectId') projectId: string,
+    @Param('memberUserId') memberUserId: string
+  ) {
+    return this.projectsService.removeProjectMember(this.getUserId(req), projectId, memberUserId)
   }
 
   private getUserId(req: AuthenticatedRequest) {

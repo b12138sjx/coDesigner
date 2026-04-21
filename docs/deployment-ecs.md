@@ -40,7 +40,15 @@ APT_MIRROR=mirrors.aliyun.com
 NPM_REGISTRY=https://registry.npmmirror.com
 ```
 
-The Docker build now reads `APT_MIRROR` for the backend image and `NPM_REGISTRY` for all Node.js images automatically.
+If Docker Hub itself is unstable in your network, you can also override the base images:
+
+```dotenv
+POSTGRES_IMAGE=postgres:16-alpine
+NODE_IMAGE=node:20-bookworm-slim
+NGINX_IMAGE=nginx:1.27-alpine
+```
+
+The Docker flow now reads `POSTGRES_IMAGE`, `NODE_IMAGE`, `NGINX_IMAGE`, `APT_MIRROR`, and `NPM_REGISTRY` from env when applicable.
 
 ## 3. Prepare Alibaba Cloud ACR
 
@@ -106,6 +114,7 @@ Use `/opt/codesigner/deploy/.env.prod` like this:
 ```dotenv
 ACR_REGISTRY=registry.cn-hangzhou.aliyuncs.com/your-namespace
 CORS_ORIGIN=http://<ecs-public-ip>
+POSTGRES_IMAGE=postgres:16-alpine
 APT_MIRROR=mirrors.aliyun.com
 NPM_REGISTRY=https://registry.npmmirror.com
 

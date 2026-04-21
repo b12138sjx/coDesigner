@@ -13,6 +13,22 @@ export function resolveUrl(path) {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
 }
 
+export function resolveAbsoluteUrl(path) {
+  return new URL(resolveUrl(path), window.location.origin).toString()
+}
+
+export function resolveWebSocketUrl(path, query = {}) {
+  const url = new URL(resolveAbsoluteUrl(path))
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    url.searchParams.set(key, String(value))
+  })
+
+  return url.toString()
+}
+
 function resolveErrorMessage(payload, fallback) {
   const message = payload?.message
 

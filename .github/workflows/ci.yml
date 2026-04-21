@@ -37,6 +37,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Validate Docker Compose files
+        run: |
+          docker compose --env-file .env.docker.example config > /tmp/codesigner-compose.local.yml
+          trap 'rm -f deploy/.env.prod' EXIT
+          cp deploy/.env.prod.example deploy/.env.prod
+          docker compose --env-file deploy/.env.prod -f deploy/compose.prod.yml config > /tmp/codesigner-compose.prod.yml
+
       - name: Smoke build web image
         run: docker build -f Dockerfile.web .
 

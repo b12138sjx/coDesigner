@@ -1,4 +1,6 @@
-FROM node:20-bookworm-slim AS deps
+ARG NODE_IMAGE=node:20-bookworm-slim
+
+FROM ${NODE_IMAGE} AS deps
 
 WORKDIR /app
 
@@ -11,14 +13,14 @@ RUN npm config set registry ${NPM_REGISTRY} \
  && npm config set fetch-retry-mintimeout 20000 \
  && npm config set fetch-retry-maxtimeout 120000 \
  && npm config set fetch-timeout 300000 \
- && npm ci --no-audit --no-fund
+ && npm ci --include=dev --no-audit --no-fund
 
 FROM deps AS builder
 
 COPY . .
 RUN npm run build
 
-FROM node:20-bookworm-slim AS runner
+FROM ${NODE_IMAGE} AS runner
 
 WORKDIR /app
 

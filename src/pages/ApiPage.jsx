@@ -5,6 +5,8 @@ import { useApiStore } from '@/stores/apiStore'
 import { downloadJsonFile, ensureExt, formatDateStamp, toSafeFileName } from '@/utils/fileExport'
 import styles from './ApiPage.module.css'
 
+const EMPTY_APIS = []
+
 const STATUS_OPTIONS = ['待确认', '开发中', '已联调', '已完成']
 const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
 const NOTE_ROLE_OPTIONS = ['前端', '后端', '产品', '测试']
@@ -22,7 +24,9 @@ function formatTime(ts) {
 export function ApiPage() {
   const { projectId } = useParams()
   const project = useProjectStore((state) => state.getProjectById(projectId))
-  const apis = useApiStore((state) => (projectId ? state.getApis(projectId) : []))
+  const apis = useApiStore((state) => (
+    projectId ? state.apisByProject[projectId] ?? EMPTY_APIS : EMPTY_APIS
+  ))
   const addApi = useApiStore((state) => state.addApi)
   const setApis = useApiStore((state) => state.setApis)
   const updateApi = useApiStore((state) => state.updateApi)

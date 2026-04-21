@@ -1,4 +1,4 @@
-const AI_API_BASE_URL = (import.meta.env.VITE_AI_API_BASE_URL ?? '').replace(
+const AI_API_BASE_URL = (import.meta.env.VITE_AI_API_BASE_URL || 'http://localhost:3001').replace(
   /\/$/,
   ''
 )

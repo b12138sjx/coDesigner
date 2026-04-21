@@ -49,7 +49,13 @@ export function DocumentsPage() {
   const setResultPreview = useDocumentAiStore((state) => state.setResultPreview)
 
   const [fileTip, setFileTip] = useState('')
+  const [showCommentBtn, setShowCommentBtn] = useState(false)
+  const [commentBtnPos, setCommentBtnPos] = useState({ top: 0, left: 0 })
+  const [previewCollapsed, setPreviewCollapsed] = useState(false)
+
   const editorRef = useRef(null)
+  const previewRef = useRef(null)
+  const containerRef = useRef(null)
   const tipTimerRef = useRef(null)
 
   const content = doc?.content ?? '<p></p>'

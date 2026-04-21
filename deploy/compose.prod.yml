@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -71,7 +71,7 @@ services:
     ports:
       - '80:80'
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1']
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1/healthz >/dev/null || exit 1']
       interval: 15s
       timeout: 5s
       retries: 10

@@ -1,4 +1,7 @@
-FROM node:20-bookworm-slim AS builder
+ARG NODE_IMAGE=node:20-bookworm-slim
+ARG NGINX_IMAGE=nginx:1.27-alpine
+
+FROM ${NODE_IMAGE} AS builder
 
 WORKDIR /app
 
@@ -11,7 +14,7 @@ RUN npm config set registry ${NPM_REGISTRY} \
  && npm config set fetch-retry-mintimeout 20000 \
  && npm config set fetch-retry-maxtimeout 120000 \
  && npm config set fetch-timeout 300000 \
- && npm ci --no-audit --no-fund
+ && npm ci --include=dev --no-audit --no-fund
 
 COPY index.html jsconfig.json vite.config.js ./
 COPY public ./public
@@ -25,7 +28,26 @@ ENV VITE_AI_API_BASE_URL=${VITE_AI_API_BASE_URL}
 
 RUN npm run build
 
-FROM nginx:1.27-alpine AS runner
+FROM ${NGINX_IMAGE} AS runner
+
+ARG APT_MIRROR=mirrors.aliyun.com
+ARG ALPINE_MIRROR=mirrors.aliyun.com
+
+RUN if [ -f /etc/alpine-release ]; then \
+    if [ -n "${ALPINE_MIRROR}" ]; then \
+      sed -Ei "s|https?://dl-cdn.alpinelinux.org/alpine|https://${ALPINE_MIRROR}/alpine|g" /etc/apk/repositories; \
+    fi; \
+    apk add --no-cache curl; \
+  elif [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+    sed -Ei "s|https?://deb.debian.org/debian|http://${APT_MIRROR}/debian|g" /etc/apt/sources.list.d/debian.sources && \
+    sed -Ei "s|https?://security.debian.org/debian-security|http://${APT_MIRROR}/debian-security|g" /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*; \
+  else \
+    echo "Unsupported base image: expected Alpine or Debian-based Nginx image" >&2; \
+    exit 1; \
+  fi
 
 COPY deploy/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html

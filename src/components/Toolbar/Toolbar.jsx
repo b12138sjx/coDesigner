@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useProjectStore } from '@/stores/projectStore'
+import { useSessionStore } from '@/stores/sessionStore'
 import { downloadJsonFile, ensureExt, formatDateStamp, toSafeFileName } from '@/utils/fileExport'
 import styles from './Toolbar.module.css'
 
@@ -12,13 +13,24 @@ export function Toolbar({ canvasApi, projectId }) {
   const undo = useCanvasStore((s) => s.undo)
   const redo = useCanvasStore((s) => s.redo)
   const getProjectById = useProjectStore((s) => s.getProjectById)
+  const authMode = useSessionStore((state) => state.authMode)
+  const accessToken = useSessionStore((state) => state.accessToken)
   const project = getProjectById(projectId)
+  const expectedRemoteCollaboration = authMode === 'user' && Boolean(accessToken) && Boolean(projectId)
   const [actionTip, setActionTip] = useState('')
+  const [collaboration, setCollaboration] = useState(
+    canvasApi?.getCollaborationState?.() ||
+      (expectedRemoteCollaboration
+        ? { mode: 'remote', statusKey: 'connecting', statusLabel: '连接中', onlineUsers: [] }
+        : { mode: 'local', onlineUsers: [] })
+  )
   const tipTimerRef = useRef(null)
   const baseName = useMemo(
     () => toSafeFileName(project?.name || 'design_canvas', 'design_canvas'),
     [project?.name]
   )
+  const isRemoteCollaboration = collaboration?.mode === 'remote'
+  const onlineUsers = collaboration?.onlineUsers || []
 
   const showTip = (text) => {
     setActionTip(text)
@@ -32,6 +44,25 @@ export function Toolbar({ canvasApi, projectId }) {
     },
     []
   )
+
+  useEffect(() => {
+    if (!canvasApi?.subscribeCollaboration) {
+      setCollaboration(
+        expectedRemoteCollaboration
+          ? { mode: 'remote', statusKey: 'connecting', statusLabel: '连接中', onlineUsers: [] }
+          : { mode: 'local', onlineUsers: [] }
+      )
+      return
+    }
+
+    const unsubscribe = canvasApi.subscribeCollaboration((nextState) => {
+      setCollaboration(nextState || { mode: 'local', onlineUsers: [] })
+    })
+
+    return () => {
+      unsubscribe?.()
+    }
+  }, [canvasApi, expectedRemoteCollaboration])
 
   const handleUndo = () => {
     if (canvasApi?.undo) {
@@ -107,9 +138,11 @@ export function Toolbar({ canvasApi, projectId }) {
   return (
     <header className={styles.toolbar}>
       <div className={styles.toolGroup}>
-        <button type="button" className={styles.fileBtn} title="保存当前画布" onClick={handleSave}>
-          保存
-        </button>
+        {!isRemoteCollaboration ? (
+          <button type="button" className={styles.fileBtn} title="保存当前画布" onClick={handleSave}>
+            保存
+          </button>
+        ) : null}
         <button type="button" className={styles.fileBtn} title="另存为文件" onClick={handleSaveAs}>
           另存为
         </button>
@@ -163,6 +196,39 @@ export function Toolbar({ canvasApi, projectId }) {
           {actionTip || '绘图在左侧，颜色请用画布原生样式面板'}
         </span>
       </div>
+      {isRemoteCollaboration ? (
+        <div className={styles.toolGroup}>
+          <span
+            className={[
+              styles.syncBadge,
+              collaboration?.statusKey === 'synced'
+                ? styles.syncSynced
+                : collaboration?.statusKey === 'reconnecting'
+                  ? styles.syncReconnecting
+                  : collaboration?.statusKey === 'offline'
+                    ? styles.syncOffline
+                    : styles.syncConnecting,
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {collaboration?.statusLabel || '连接中'}
+          </span>
+          <div className={styles.onlineUsers}>
+            <span className={styles.onlineCount}>在线 {onlineUsers.length}</span>
+            {onlineUsers.slice(0, 4).map((user) => (
+              <span
+                key={user.id}
+                className={styles.userChip}
+                title={user.isSelf ? `${user.name}（你）` : user.name}
+              >
+                <span className={styles.userDot} style={{ backgroundColor: user.color }} />
+                <span>{user.isSelf ? `${user.name}（你）` : user.name}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className={styles.toolGroup}>
         <label className={styles.toggle}>
           <input

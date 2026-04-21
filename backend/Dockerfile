@@ -1,17 +1,28 @@
-FROM node:20-bookworm-slim AS deps
+ARG NODE_IMAGE=node:20-bookworm-slim
+
+FROM ${NODE_IMAGE} AS deps
 
 WORKDIR /app
 
 ARG APT_MIRROR=mirrors.aliyun.com
+ARG ALPINE_MIRROR=mirrors.aliyun.com
 ARG NPM_REGISTRY=https://registry.npmjs.org/
 
-RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+RUN if [ -f /etc/alpine-release ]; then \
+    if [ -n "${ALPINE_MIRROR}" ]; then \
+      sed -Ei "s|https?://dl-cdn.alpinelinux.org/alpine|https://${ALPINE_MIRROR}/alpine|g" /etc/apk/repositories; \
+    fi; \
+    apk add --no-cache openssl; \
+  elif [ -f /etc/apt/sources.list.d/debian.sources ]; then \
     sed -Ei "s|https?://deb.debian.org/debian|http://${APT_MIRROR}/debian|g" /etc/apt/sources.list.d/debian.sources && \
-    sed -Ei "s|https?://security.debian.org/debian-security|http://${APT_MIRROR}/debian-security|g" /etc/apt/sources.list.d/debian.sources; \
-  fi \
- && apt-get update \
- && apt-get install -y --no-install-recommends openssl \
- && rm -rf /var/lib/apt/lists/*
+    sed -Ei "s|https?://security.debian.org/debian-security|http://${APT_MIRROR}/debian-security|g" /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends openssl && \
+    rm -rf /var/lib/apt/lists/*; \
+  else \
+    echo "Unsupported base image: expected Alpine or Debian-based Node image" >&2; \
+    exit 1; \
+  fi
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
@@ -22,7 +33,7 @@ RUN npm config set registry ${NPM_REGISTRY} \
  && npm config set fetch-retry-mintimeout 20000 \
  && npm config set fetch-retry-maxtimeout 120000 \
  && npm config set fetch-timeout 300000 \
- && npm ci --no-audit --no-fund
+ && npm ci --include=dev --no-audit --no-fund
 
 FROM deps AS builder
 
