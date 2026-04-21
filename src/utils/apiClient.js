@@ -1,4 +1,4 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1').replace(
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api/v1').replace(
   /\/$/,
   ''
 )
@@ -11,6 +11,22 @@ export function createRequestError(message, extra = {}) {
 
 export function resolveUrl(path) {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
+}
+
+export function resolveAbsoluteUrl(path) {
+  return new URL(resolveUrl(path), window.location.origin).toString()
+}
+
+export function resolveWebSocketUrl(path, query = {}) {
+  const url = new URL(resolveAbsoluteUrl(path))
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    url.searchParams.set(key, String(value))
+  })
+
+  return url.toString()
 }
 
 function resolveErrorMessage(payload, fallback) {

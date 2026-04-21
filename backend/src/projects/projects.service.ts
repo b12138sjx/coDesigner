@@ -6,9 +6,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { Prisma, Project, ProjectCanvas } from '@prisma/client'
+import { Prisma, Project, ProjectCanvas, User, UserStatus } from '@prisma/client'
 import { randomBytes } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
+import { AddProjectMemberDto } from './dto/add-project-member.dto'
 import { CreateProjectDto } from './dto/create-project.dto'
 import {
   ImportLocalProjectItemDto,
@@ -18,6 +19,10 @@ import { PutProjectCanvasDto } from './dto/put-project-canvas.dto'
 import { UpdateProjectDto } from './dto/update-project.dto'
 
 type ProjectWithCanvas = Prisma.ProjectGetPayload<{ include: { canvas: true } }>
+type ProjectWithMembers = Prisma.ProjectGetPayload<{
+  include: { owner: true; members: { include: { user: true } } }
+}>
+type ProjectAccessRole = 'owner' | 'editor'
 
 @Injectable()
 export class ProjectsService {
@@ -26,14 +31,23 @@ export class ProjectsService {
   async listProjects(userId: string) {
     const projects = await this.prisma.project.findMany({
       where: {
-        ownerUserId: userId,
         deletedAt: null,
+        OR: [
+          { ownerUserId: userId },
+          {
+            members: {
+              some: {
+                userId,
+              },
+            },
+          },
+        ],
       },
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
     })
 
     return {
-      projects: projects.map((project) => this.serializeProject(project)),
+      projects: projects.map((project) => this.serializeProject(project, userId)),
     }
   }
 
@@ -52,7 +66,7 @@ export class ProjectsService {
         },
       })
 
-      return { project: this.serializeProject(project) }
+      return { project: this.serializeProject(project, userId) }
     } catch (error) {
       if (this.isUniqueViolation(error)) {
         throw new BadRequestException('Project key already exists.')
@@ -62,12 +76,16 @@ export class ProjectsService {
   }
 
   async getProject(userId: string, projectKey: string) {
-    const project = await this.getProjectEntity(userId, projectKey)
-    return { project: this.serializeProject(project) }
+    const access = await this.getProjectAccessWithMembers(userId, projectKey)
+
+    return {
+      project: this.serializeProjectDetail(access.project, access.accessRole),
+    }
   }
 
   async updateProject(userId: string, projectKey: string, dto: UpdateProjectDto) {
-    const project = await this.getProjectEntity(userId, projectKey)
+    const access = await this.getProjectAccess(userId, projectKey, true)
+    const project = access.project
 
     const data: Prisma.ProjectUpdateInput = {}
     if (dto.name !== undefined) {
@@ -78,7 +96,7 @@ export class ProjectsService {
     }
 
     if (Object.keys(data).length === 0) {
-      return { project: this.serializeProject(project) }
+      return { project: this.serializeProject(project, userId) }
     }
 
     const updatedProject = await this.prisma.project.update({
@@ -86,11 +104,12 @@ export class ProjectsService {
       data,
     })
 
-    return { project: this.serializeProject(updatedProject) }
+    return { project: this.serializeProject(updatedProject, userId) }
   }
 
   async deleteProject(userId: string, projectKey: string) {
-    const project = await this.getProjectEntity(userId, projectKey)
+    const access = await this.getProjectAccess(userId, projectKey, true)
+    const project = access.project
     const now = new Date()
 
     await this.prisma.project.update({
@@ -105,12 +124,13 @@ export class ProjectsService {
   }
 
   async getProjectCanvas(userId: string, projectKey: string) {
-    const project = await this.getProjectEntity(userId, projectKey, true)
-    return this.serializeCanvas(project)
+    const access = await this.getProjectAccessWithCanvas(userId, projectKey)
+    return this.serializeCanvas(access.project)
   }
 
   async putProjectCanvas(userId: string, projectKey: string, dto: PutProjectCanvasDto) {
-    const project = await this.getProjectEntity(userId, projectKey)
+    const access = await this.getProjectAccess(userId, projectKey)
+    const project = access.project
     const now = new Date()
     const nextRevision = dto.baseRevision + 1
 
@@ -181,6 +201,93 @@ export class ProjectsService {
       updatedAt: now,
       snapshotSchemaVersion: dto.snapshotSchemaVersion,
     }
+  }
+
+  async addProjectMember(userId: string, projectKey: string, dto: AddProjectMemberDto) {
+    const access = await this.getProjectAccess(userId, projectKey, true)
+    const project = access.project
+    const usernameNormalized = this.normalizeUsername(dto.username)
+
+    const user = await this.prisma.user.findUnique({
+      where: { usernameNormalized },
+    })
+
+    if (!user || user.deletedAt || user.status !== UserStatus.active) {
+      throw new BadRequestException('用户不存在或不可用。')
+    }
+
+    if (user.id === project.ownerUserId) {
+      throw new BadRequestException('项目拥有者已默认拥有访问权限。')
+    }
+
+    const now = new Date()
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.projectMember.create({
+          data: {
+            projectId: project.id,
+            userId: user.id,
+            createdAt: now,
+          },
+        })
+
+        await tx.project.update({
+          where: { id: project.id },
+          data: {
+            updatedAt: now,
+          },
+        })
+      })
+    } catch (error) {
+      if (this.isUniqueViolation(error)) {
+        throw new BadRequestException('该用户已经是项目协作者。')
+      }
+
+      throw error
+    }
+
+    return {
+      member: this.serializeMember(user, false),
+    }
+  }
+
+  async removeProjectMember(userId: string, projectKey: string, memberUserId: string) {
+    const access = await this.getProjectAccess(userId, projectKey, true)
+    const project = access.project
+
+    if (memberUserId === project.ownerUserId) {
+      throw new BadRequestException('项目拥有者不能被移除。')
+    }
+
+    const now = new Date()
+    const result = await this.prisma.$transaction(async (tx) => {
+      const deleteResult = await tx.projectMember.deleteMany({
+        where: {
+          projectId: project.id,
+          userId: memberUserId,
+        },
+      })
+
+      if (deleteResult.count === 0) {
+        return deleteResult
+      }
+
+      await tx.project.update({
+        where: { id: project.id },
+        data: {
+          updatedAt: now,
+        },
+      })
+
+      return deleteResult
+    })
+
+    if (result.count === 0) {
+      throw new NotFoundException('协作者不存在。')
+    }
+
+    return { success: true }
   }
 
   async importLocalProjects(userId: string, dto: ImportLocalProjectsDto) {
@@ -277,19 +384,36 @@ export class ProjectsService {
     }
   }
 
-  private async getProjectEntity(
-    userId: string,
-    projectKey: string,
-    includeCanvas = false
-  ): Promise<ProjectWithCanvas> {
+  async getRealtimeProjectAccess(userId: string, projectKey: string) {
+    const access = await this.getProjectAccess(userId, projectKey)
+
+    return {
+      accessRole: access.accessRole,
+      projectId: access.project.id,
+      projectKey: access.project.projectKey,
+    }
+  }
+
+  private async getProjectAccess(userId: string, projectKey: string, ownerOnly = false) {
     const project = await this.prisma.project.findFirst({
-      where: {
-        ownerUserId: userId,
-        projectKey,
-        deletedAt: null,
-      },
+      where: this.buildProjectAccessWhere(userId, projectKey, ownerOnly),
+    })
+
+    if (!project) {
+      throw new NotFoundException('Project not found.')
+    }
+
+    return {
+      accessRole: this.getAccessRole(project, userId),
+      project,
+    }
+  }
+
+  private async getProjectAccessWithCanvas(userId: string, projectKey: string) {
+    const project = await this.prisma.project.findFirst({
+      where: this.buildProjectAccessWhere(userId, projectKey, false),
       include: {
-        canvas: includeCanvas,
+        canvas: true,
       },
     })
 
@@ -297,16 +421,116 @@ export class ProjectsService {
       throw new NotFoundException('Project not found.')
     }
 
-    return project as ProjectWithCanvas
+    return {
+      accessRole: this.getAccessRole(project, userId),
+      project: project as ProjectWithCanvas,
+    }
   }
 
-  private serializeProject(project: Project) {
+  private async getProjectAccessWithMembers(userId: string, projectKey: string) {
+    const project = await this.prisma.project.findFirst({
+      where: this.buildProjectAccessWhere(userId, projectKey, false),
+      include: {
+        owner: true,
+        members: {
+          include: {
+            user: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    })
+
+    if (!project) {
+      throw new NotFoundException('Project not found.')
+    }
+
+    return {
+      accessRole: this.getAccessRole(project, userId),
+      project: project as ProjectWithMembers,
+    }
+  }
+
+  private buildProjectAccessWhere(
+    userId: string,
+    projectKey: string,
+    ownerOnly: boolean
+  ): Prisma.ProjectWhereInput {
+    if (ownerOnly) {
+      return {
+        ownerUserId: userId,
+        projectKey,
+        deletedAt: null,
+      }
+    }
+
+    return {
+      projectKey,
+      deletedAt: null,
+      OR: [
+        { ownerUserId: userId },
+        {
+          members: {
+            some: {
+              userId,
+            },
+          },
+        },
+      ],
+    }
+  }
+
+  private getAccessRole(project: Pick<Project, 'ownerUserId'>, userId: string): ProjectAccessRole {
+    return project.ownerUserId === userId ? 'owner' : 'editor'
+  }
+
+  private serializeProject(project: Project, userId: string) {
     return {
       id: project.projectKey,
       name: project.name,
       brief: project.brief,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
+      accessRole: this.getAccessRole(project, userId),
+    }
+  }
+
+  private serializeProjectDetail(project: ProjectWithMembers, accessRole: ProjectAccessRole) {
+    return {
+      id: project.projectKey,
+      name: project.name,
+      brief: project.brief,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      accessRole,
+      members: this.serializeMembers(project),
+    }
+  }
+
+  private serializeMembers(project: ProjectWithMembers) {
+    const members = [this.serializeMember(project.owner, true)]
+    const seen = new Set<string>([project.owner.id])
+
+    for (const membership of project.members) {
+      if (seen.has(membership.user.id)) continue
+      members.push(this.serializeMember(membership.user, false))
+      seen.add(membership.user.id)
+    }
+
+    return members
+  }
+
+  private serializeMember(
+    user: Pick<User, 'id' | 'username' | 'displayName'>,
+    isOwner: boolean
+  ) {
+    return {
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      isOwner,
     }
   }
 
@@ -370,6 +594,10 @@ export class ProjectsService {
 
   private toInputJson(value: Record<string, unknown>): Prisma.InputJsonValue {
     return value as Prisma.InputJsonValue
+  }
+
+  private normalizeUsername(username: string) {
+    return username.trim().toLowerCase()
   }
 
   private isUniqueViolation(error: unknown) {

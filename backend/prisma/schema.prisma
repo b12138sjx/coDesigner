@@ -25,6 +25,7 @@ model User {
   credential         UserCredential?
   sessions           UserSession[]
   ownedProjects      Project[]       @relation("ProjectOwner")
+  projectMemberships ProjectMember[]
 
   @@map("users")
   @@index([username])
@@ -41,6 +42,7 @@ model Project {
   deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(6)
   owner       User           @relation("ProjectOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   canvas      ProjectCanvas?
+  members     ProjectMember[]
 
   @@map("projects")
   @@unique([ownerUserId, projectKey], map: "projects_owner_user_id_project_key_key")
@@ -58,6 +60,18 @@ model ProjectCanvas {
   project                Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("project_canvases")
+}
+
+model ProjectMember {
+  projectId String   @map("project_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@map("project_members")
+  @@index([userId])
 }
 
 model UserCredential {

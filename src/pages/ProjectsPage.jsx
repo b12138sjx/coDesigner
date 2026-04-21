@@ -120,6 +120,7 @@ export function ProjectsPage() {
   const handleDelete = useCallback(
     async (event, project) => {
       event.stopPropagation()
+      if (project.accessRole === 'editor') return
       setMenuOpenId(null)
       const confirmed = window.confirm(`确定要删除项目「${project.name}」吗？此操作不可恢复。`)
       if (!confirmed) return
@@ -213,46 +214,54 @@ export function ProjectsPage() {
                     </div>
                   ) : (
                     <>
-                      <h3>{project.name}</h3>
+                      <div className={styles.cardTitleRow}>
+                        <h3>{project.name}</h3>
+                        <span className={styles.roleBadge}>
+                          {project.accessRole === 'editor' ? '共享项目' : '我的项目'}
+                        </span>
+                      </div>
                       {(project.brief || '').trim() ? (
                         <p className={styles.cardBrief}>{(project.brief || '').trim().split('\n')[0]}</p>
                       ) : null}
                       <p>项目 ID: {project.id}</p>
+                      <p>访问权限: {project.accessRole === 'editor' ? 'Editor' : 'Owner'}</p>
                       <p>最近更新: {formatDateTime(project.updatedAt)}</p>
                     </>
                   )}
                 </div>
-                <div className={styles.cardMenuWrap} ref={menuOpenId === project.id ? menuRef : null}>
-                  <button
-                    type="button"
-                    className={styles.cardMenuBtn}
-                    onClick={(event) => toggleMenu(event, project.id)}
-                    title="更多操作"
-                    aria-label="更多操作"
-                    style={{ padding: '4px' }}
-                    aria-expanded={menuOpenId === project.id}
-                  >
-                    <MenuIcon />
-                  </button>
-                  {menuOpenId === project.id && (
-                    <div className={styles.cardDropdown}>
-                      <button
-                        type="button"
-                        className={styles.dropdownItem}
-                        onClick={(event) => startRename(event, project)}
-                      >
-                        重命名
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.dropdownItemDanger}
-                        onClick={(event) => void handleDelete(event, project)}
-                      >
-                        删除项目
-                      </button>
-                    </div>
-                  )}
-                </div>
+                {project.accessRole !== 'editor' ? (
+                  <div className={styles.cardMenuWrap} ref={menuOpenId === project.id ? menuRef : null}>
+                    <button
+                      type="button"
+                      className={styles.cardMenuBtn}
+                      onClick={(event) => toggleMenu(event, project.id)}
+                      title="更多操作"
+                      aria-label="更多操作"
+                      style={{ padding: '4px' }}
+                      aria-expanded={menuOpenId === project.id}
+                    >
+                      <MenuIcon />
+                    </button>
+                    {menuOpenId === project.id && (
+                      <div className={styles.cardDropdown}>
+                        <button
+                          type="button"
+                          className={styles.dropdownItem}
+                          onClick={(event) => startRename(event, project)}
+                        >
+                          重命名
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.dropdownItemDanger}
+                          onClick={(event) => void handleDelete(event, project)}
+                        >
+                          删除项目
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
               {editingProjectId !== project.id && (
                 <button type="button" onClick={() => openProject(project.id)}>

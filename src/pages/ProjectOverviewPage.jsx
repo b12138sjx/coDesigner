@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, Navigate } from 'react-router-dom'
 import { useProjectStore } from '@/stores/projectStore'
+import { useSessionStore } from '@/stores/sessionStore'
 import styles from './ProjectOverviewPage.module.css'
 
 const moduleCards = [
@@ -35,18 +36,35 @@ function EditIcon({ className, ...props }) {
 export function ProjectOverviewPage() {
   const { projectId } = useParams()
   const project = useProjectStore((state) => state.getProjectById(projectId))
+  const projectDetail = useProjectStore((state) => state.getProjectDetailById(projectId))
   const setCurrentProject = useProjectStore((state) => state.setCurrentProject)
+  const loadProjectDetail = useProjectStore((state) => state.loadProjectDetail)
   const updateProject = useProjectStore((state) => state.updateProject)
+  const addProjectMember = useProjectStore((state) => state.addProjectMember)
+  const removeProjectMember = useProjectStore((state) => state.removeProjectMember)
+  const authMode = useSessionStore((state) => state.authMode)
   const [isEditingBrief, setIsEditingBrief] = useState(false)
   const [briefDraft, setBriefDraft] = useState('')
+  const [memberDraft, setMemberDraft] = useState('')
+  const [memberBusy, setMemberBusy] = useState(false)
+  const [memberMessage, setMemberMessage] = useState('')
+  const [memberError, setMemberError] = useState('')
 
   useEffect(() => {
     if (projectId) {
       setCurrentProject(projectId)
+      if (authMode === 'user') {
+        void loadProjectDetail(projectId).catch(() => {})
+      }
     }
-  }, [projectId, setCurrentProject])
+  }, [authMode, loadProjectDetail, projectId, setCurrentProject])
+
+  const accessRole = projectDetail?.accessRole || project?.accessRole || 'owner'
+  const members = projectDetail?.members || []
+  const canManageProject = authMode !== 'user' || accessRole === 'owner'
 
   const startEditBrief = () => {
+    if (!canManageProject) return
     setBriefDraft(project?.brief ?? '')
     setIsEditingBrief(true)
   }
@@ -63,6 +81,44 @@ export function ProjectOverviewPage() {
     setIsEditingBrief(false)
   }
 
+  const inviteMember = async (event) => {
+    event.preventDefault()
+    if (!projectId || !memberDraft.trim()) return
+
+    setMemberBusy(true)
+    setMemberError('')
+    setMemberMessage('')
+
+    try {
+      await addProjectMember(projectId, memberDraft.trim())
+      setMemberDraft('')
+      setMemberMessage('协作者已添加')
+    } catch (error) {
+      setMemberError(error instanceof Error ? error.message : '添加协作者失败')
+    } finally {
+      setMemberBusy(false)
+    }
+  }
+
+  const handleRemoveMember = async (member) => {
+    if (!projectId || member.isOwner) return
+    const confirmed = window.confirm(`确定移除协作者「${member.displayName || member.username}」吗？`)
+    if (!confirmed) return
+
+    setMemberBusy(true)
+    setMemberError('')
+    setMemberMessage('')
+
+    try {
+      await removeProjectMember(projectId, member.id)
+      setMemberMessage('协作者已移除')
+    } catch (error) {
+      setMemberError(error instanceof Error ? error.message : '移除协作者失败')
+    } finally {
+      setMemberBusy(false)
+    }
+  }
+
   if (!project) return <Navigate to="/projects" replace />
 
   const briefText = (project.brief || '').trim()
@@ -77,8 +133,11 @@ export function ProjectOverviewPage() {
 
       <div className={styles.intro}>
         <div className={styles.introHeader}>
-          <span className={styles.introLabel}>项目简介</span>
-          {!isEditingBrief && (
+          <div className={styles.introMeta}>
+            <span className={styles.introLabel}>项目简介</span>
+            <span className={styles.roleBadge}>{accessRole === 'owner' ? 'Owner' : 'Editor'}</span>
+          </div>
+          {!isEditingBrief && canManageProject && (
             <button
               type="button"
               className={styles.introEditIcon}
@@ -112,10 +171,10 @@ export function ProjectOverviewPage() {
         ) : (
           <div
             className={showPlaceholder ? styles.introPlaceholder : styles.introText}
-            onClick={startEditBrief}
-            onKeyDown={(e) => e.key === 'Enter' && startEditBrief()}
-            role="button"
-            tabIndex={0}
+            onClick={canManageProject ? startEditBrief : undefined}
+            onKeyDown={(e) => canManageProject && e.key === 'Enter' && startEditBrief()}
+            role={canManageProject ? 'button' : undefined}
+            tabIndex={canManageProject ? 0 : -1}
           >
             {showPlaceholder
               ? BRIEF_PLACEHOLDER
@@ -125,6 +184,63 @@ export function ProjectOverviewPage() {
           </div>
         )}
       </div>
+
+      <section className={styles.collabSection}>
+        <div className={styles.collabHead}>
+          <div>
+            <h2>协作者</h2>
+            <p>
+              {authMode === 'user'
+                ? '在线协作前先把项目成员关系建好。owner 可按用户名邀请已注册用户。'
+                : '登录账号后可邀请协作者共同编辑画布。'}
+            </p>
+          </div>
+          <span className={styles.collabCount}>{members.length || 1} 人</span>
+        </div>
+
+        {authMode === 'user' && canManageProject ? (
+          <form className={styles.inviteForm} onSubmit={inviteMember}>
+            <input
+              type="text"
+              value={memberDraft}
+              onChange={(event) => setMemberDraft(event.target.value)}
+              placeholder="输入已注册用户名"
+              disabled={memberBusy}
+            />
+            <button type="submit" disabled={memberBusy || !memberDraft.trim()}>
+              {memberBusy ? '处理中...' : '添加协作者'}
+            </button>
+          </form>
+        ) : null}
+
+        {memberError ? <p className={styles.memberError}>{memberError}</p> : null}
+        {memberMessage ? <p className={styles.memberMessage}>{memberMessage}</p> : null}
+
+        <div className={styles.memberList}>
+          {(members.length > 0 ? members : [{ id: 'owner-local', username: 'local', displayName: '当前用户', isOwner: true }]).map((member) => (
+            <div key={member.id} className={styles.memberItem}>
+              <div className={styles.memberAvatar}>
+                {(member.displayName || member.username || 'U').slice(0, 1).toUpperCase()}
+              </div>
+              <div className={styles.memberMeta}>
+                <strong>{member.displayName || member.username}</strong>
+                <span>@{member.username || 'local-user'}</span>
+              </div>
+              <span className={styles.memberRole}>{member.isOwner ? 'Owner' : 'Editor'}</span>
+              {authMode === 'user' && canManageProject && !member.isOwner ? (
+                <button
+                  type="button"
+                  className={styles.memberRemove}
+                  onClick={() => handleRemoveMember(member)}
+                  disabled={memberBusy}
+                >
+                  移除
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className={styles.cards}>
         {moduleCards.map((card) => (
