@@ -460,6 +460,90 @@
 .commentSubmit:hover:not(:disabled) { background: var(--color-primary-hover); }
 .commentSubmit:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* 日间：选区工具栏 / 注释气泡与全局主题一致（不再固定深色玻璃） */
+:global(html[data-theme='light']) .selectionToolbar,
+:global(html[data-theme='light']) .selectionToolbarMeasure {
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
+}
+
+:global(html[data-theme='light']) .selectionToolbarButton,
+:global(html[data-theme='light']) .selectionCommentButton {
+  color: var(--color-text-muted);
+}
+
+:global(html[data-theme='light']) .selectionToolbarPrimary {
+  color: var(--color-primary);
+}
+
+:global(html[data-theme='light']) .selectionToolbarButton:hover {
+  color: var(--color-text);
+}
+
+:global(html[data-theme='light']) .selectionToolbarPrimary:hover {
+  color: var(--color-primary-hover);
+}
+
+:global(html[data-theme='light']) .selectionCommentButton:hover {
+  color: var(--color-text);
+}
+
+:global(html[data-theme='light']) .selectionToolbarDivider {
+  background: var(--color-border);
+}
+
+:global(html[data-theme='light']) .selectionAiTray {
+  border-top-color: var(--color-border);
+}
+
+:global(html[data-theme='light']) .commentComposerPopover,
+:global(html[data-theme='light']) .commentComposerMeasure {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+
+:global(html[data-theme='light']) .commentMeta strong {
+  color: var(--color-text);
+}
+
+:global(html[data-theme='light']) .commentMeta span {
+  color: var(--color-text-muted);
+}
+
+:global(html[data-theme='light']) .commentClose {
+  color: var(--color-text-muted);
+}
+
+:global(html[data-theme='light']) .commentClose:hover {
+  color: var(--color-text);
+}
+
+:global(html[data-theme='light']) .commentInput {
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+
+:global(html[data-theme='light']) .commentInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+:global(html[data-theme='light']) .commentInput:focus {
+  border-color: rgba(37, 99, 235, 0.45);
+}
+
+:global(html[data-theme='light']) .commentGhost {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+:global(html[data-theme='light']) .commentGhost:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
 /* ────────────────────────────────────────────────
    Responsive
 ──────────────────────────────────────────────── */
