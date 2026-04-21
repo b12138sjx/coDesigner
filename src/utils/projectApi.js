@@ -52,4 +52,17 @@ export const projectApi = {
       accessToken,
     })
   },
+  addMember(projectId, payload, accessToken) {
+    return request(`/projects/${encodeProjectId(projectId)}/members`, {
+      method: 'POST',
+      body: payload,
+      accessToken,
+    })
+  },
+  removeMember(projectId, memberUserId, accessToken) {
+    return request(`/projects/${encodeProjectId(projectId)}/members/${encodeProjectId(memberUserId)}`, {
+      method: 'DELETE',
+      accessToken,
+    })
+  },
 }

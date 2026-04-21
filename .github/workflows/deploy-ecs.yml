@@ -1,0 +1,88 @@
+name: Deploy ECS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ecs
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-push-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      WEB_IMAGE: ${{ secrets.ACR_REGISTRY }}/codesigner-web
+      BACKEND_IMAGE: ${{ secrets.ACR_REGISTRY }}/codesigner-backend
+      AI_API_IMAGE: ${{ secrets.ACR_REGISTRY }}/codesigner-ai-api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ACR
+        env:
+          ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |
+          REGISTRY_HOST="${ACR_REGISTRY%%/*}"
+          echo "$ACR_PASSWORD" | docker login "$REGISTRY_HOST" --username "$ACR_USERNAME" --password-stdin
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.web
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=/api/v1
+            VITE_AI_API_BASE_URL=
+          tags: |
+            ${{ env.WEB_IMAGE }}:${{ github.sha }}
+            ${{ env.WEB_IMAGE }}:latest
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            ${{ env.BACKEND_IMAGE }}:latest
+
+      - name: Build and push ai-api image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ai-api
+          file: ./ai-api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.AI_API_IMAGE }}:${{ github.sha }}
+            ${{ env.AI_API_IMAGE }}:latest
+
+      - name: Deploy on ECS
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          port: ${{ secrets.ECS_PORT }}
+          script_stop: true
+          envs: IMAGE_TAG
+          script: |
+            cd /opt/codesigner
+            IMAGE_TAG="$IMAGE_TAG" docker compose --env-file deploy/.env.prod -f deploy/compose.prod.yml pull
+            IMAGE_TAG="$IMAGE_TAG" docker compose --env-file deploy/.env.prod -f deploy/compose.prod.yml up -d --remove-orphans
+            docker image prune -f

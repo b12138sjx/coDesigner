@@ -11,7 +11,7 @@
 - **路由**: React Router v7
 - **协同通信**: Socket.io-client（预留，后续对接后端 WebSocket）
 
-## 项目结构
+## 项目结构w
 
 ```
 src/
@@ -74,3 +74,23 @@ npm run preview
 - [tldraw 文档](https://tldraw.dev)
 - [Zustand](https://github.com/pmndrs/zustand)
 - [@dnd-kit](https://dndkit.com)
+
+## Docker Quick Start
+
+If you want to run the full stack without installing PostgreSQL locally, use Docker Compose:
+
+```bash
+docker compose up -d --build
+```
+
+Default local URL:
+
+```text
+http://localhost:8080
+```
+
+Optional: copy `.env.docker.example` to `.env` first if you want to change ports, JWT secrets, or OpenAI settings.
+
+If Docker Hub access is unstable in your network, you can also override the base images in `.env`, for example `NODE_IMAGE`, `NGINX_IMAGE`, and `POSTGRES_IMAGE`.
+
+Production ECS deployment instructions live in [docs/deployment-ecs.md](docs/deployment-ecs.md).

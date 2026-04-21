@@ -10,11 +10,11 @@ const defaultProject = {
   name: 'Default Project',
   brief: 'Shared local workspace for design, documents, and APIs.',
   updatedAt: Date.now(),
+  accessRole: 'owner',
 }
 
 const baseProjects = [SAMPLE_PROJECT, defaultProject]
 const nonSyncProjectIds = new Set(baseProjects.map((project) => project.id))
-
 
 function normalizeTimestamp(value, fallback = Date.now()) {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -29,6 +29,24 @@ function normalizeProject(project, fallbackUpdatedAt = Date.now()) {
     brief: project?.brief || '',
     createdAt: normalizeTimestamp(project?.createdAt, fallbackUpdatedAt),
     updatedAt: normalizeTimestamp(project?.updatedAt, fallbackUpdatedAt),
+    accessRole: project?.accessRole === 'editor' ? 'editor' : 'owner',
+  }
+}
+
+function normalizeMember(member) {
+  return {
+    id: member?.id || '',
+    username: member?.username || '',
+    displayName: member?.displayName || '',
+    isOwner: Boolean(member?.isOwner),
+  }
+}
+
+function normalizeProjectDetail(project, fallbackProject = null) {
+  const base = normalizeProject(project || fallbackProject || {}, Date.now())
+  return {
+    ...base,
+    members: Array.isArray(project?.members) ? project.members.map(normalizeMember) : [],
   }
 }
 
@@ -88,6 +106,15 @@ function buildImportPayload(localProjects, localSnapshotsByProject) {
   }
 }
 
+function mergeProjectCollections(projects, nextProject) {
+  const normalized = normalizeProject(nextProject)
+  const exists = projects.some((project) => project.id === normalized.id)
+  const nextProjects = exists
+    ? projects.map((project) => (project.id === normalized.id ? { ...project, ...normalized } : project))
+    : [normalized, ...projects]
+
+  return sortProjects(nextProjects)
+}
 
 export const useProjectStore = create(
   persist(
@@ -98,6 +125,7 @@ export const useProjectStore = create(
       localProjects: sortProjects(mergeBaseProjects(baseProjects)),
       localCurrentProjectId: SAMPLE_PROJECT.id,
       remoteProjects: [],
+      projectDetails: {},
       projectsReady: true,
       projectsLoading: false,
       projectsError: '',
@@ -110,6 +138,10 @@ export const useProjectStore = create(
       getProjectById: (id) => {
         const state = useProjectStore.getState()
         return state.projects.find((project) => project.id === id) || null
+      },
+      getProjectDetailById: (id) => {
+        const state = useProjectStore.getState()
+        return state.projectDetails[id] || null
       },
       syncWithSession: async () => {
         const session = useSessionStore.getState()
@@ -127,6 +159,7 @@ export const useProjectStore = create(
             projects: localProjects,
             currentProjectId,
             remoteProjects: [],
+            projectDetails: {},
             projectsReady: true,
             projectsLoading: false,
             projectsError: '',
@@ -140,6 +173,7 @@ export const useProjectStore = create(
           projectsLoading: true,
           projectsReady: false,
           projectsError: '',
+          projectDetails: {},
         })
 
         canvasSnapshotStore.clearRemoteSnapshots()
@@ -157,9 +191,8 @@ export const useProjectStore = create(
           const missingProjects = importPayload.projects.filter(
             (project) => !remoteProjectIds.has(project.id)
           )
-          const shouldImport = missingProjects.length > 0
 
-          if (shouldImport) {
+          if (missingProjects.length > 0) {
             await projectApi.importLocal({ projects: missingProjects }, session.accessToken)
             set((state) => ({
               importedUserIds: {
@@ -169,7 +202,6 @@ export const useProjectStore = create(
             }))
             response = await projectApi.list(session.accessToken)
           }
-
 
           const remoteProjects = sortProjects(
             Array.isArray(response?.projects)
@@ -198,12 +230,50 @@ export const useProjectStore = create(
             remoteProjects: [],
             projects: [],
             currentProjectId: null,
+            projectDetails: {},
             projectsReady: true,
             projectsLoading: false,
             projectsError: message,
           })
           return { ok: false, error: message }
         }
+      },
+      loadProjectDetail: async (id) => {
+        if (!id) return null
+
+        const session = useSessionStore.getState()
+        const project = get().getProjectById(id)
+
+        if (session.authMode !== 'user' || !session.accessToken) {
+          const localDetail = normalizeProjectDetail(project || { id })
+          set((state) => ({
+            projectDetails: {
+              ...state.projectDetails,
+              [id]: localDetail,
+            },
+          }))
+          return localDetail
+        }
+
+        const response = await projectApi.get(id, session.accessToken)
+        const detail = normalizeProjectDetail(response?.project, project)
+
+        set((state) => {
+          const remoteProjects = state.remoteProjects.some((item) => item.id === id)
+            ? mergeProjectCollections(state.remoteProjects, detail)
+            : state.remoteProjects
+
+          return {
+            remoteProjects,
+            projects: state.mode === 'remote' ? remoteProjects : state.projects,
+            projectDetails: {
+              ...state.projectDetails,
+              [id]: detail,
+            },
+          }
+        })
+
+        return detail
       },
       createProject: async (name) => {
         const session = useSessionStore.getState()
@@ -270,9 +340,23 @@ export const useProjectStore = create(
             const remoteProjects = sortProjects(
               state.remoteProjects.map((project) => (project.id === id ? nextProject : project))
             )
+
+            const nextDetail = state.projectDetails[id]
+              ? {
+                  ...state.projectDetails[id],
+                  ...normalizeProjectDetail(response?.project, state.projectDetails[id]),
+                }
+              : state.projectDetails[id]
+
             return {
               remoteProjects,
               projects: state.mode === 'remote' ? remoteProjects : state.projects,
+              projectDetails: nextDetail
+                ? {
+                    ...state.projectDetails,
+                    [id]: nextDetail,
+                  }
+                : state.projectDetails,
             }
           })
 
@@ -291,13 +375,50 @@ export const useProjectStore = create(
                 : project
             )
           )
+
+          const nextProject = localProjects.find((project) => project.id === id) || null
+
           return {
             localProjects,
             projects: state.mode === 'local' ? localProjects : state.projects,
+            projectDetails: nextProject
+              ? {
+                  ...state.projectDetails,
+                  [id]: normalizeProjectDetail({
+                    ...(state.projectDetails[id] || nextProject),
+                    ...nextProject,
+                  }),
+                }
+              : state.projectDetails,
           }
         })
 
         return get().getProjectById(id)
+      },
+      addProjectMember: async (projectId, username) => {
+        const session = useSessionStore.getState()
+        if (session.authMode !== 'user' || !session.accessToken) {
+          throw new Error('当前模式不支持协作者管理。')
+        }
+
+        await projectApi.addMember(
+          projectId,
+          {
+            username: username.trim(),
+          },
+          session.accessToken
+        )
+
+        return get().loadProjectDetail(projectId)
+      },
+      removeProjectMember: async (projectId, userId) => {
+        const session = useSessionStore.getState()
+        if (session.authMode !== 'user' || !session.accessToken) {
+          throw new Error('当前模式不支持协作者管理。')
+        }
+
+        await projectApi.removeMember(projectId, userId, session.accessToken)
+        return get().loadProjectDetail(projectId)
       },
       removeProject: async (id) => {
         const session = useSessionStore.getState()
@@ -308,6 +429,9 @@ export const useProjectStore = create(
             const remoteProjects = sortProjects(
               state.remoteProjects.filter((project) => project.id !== id)
             )
+            const nextDetails = { ...state.projectDetails }
+            delete nextDetails[id]
+
             return {
               remoteProjects,
               projects: state.mode === 'remote' ? remoteProjects : state.projects,
@@ -315,6 +439,7 @@ export const useProjectStore = create(
                 state.currentProjectId === id
                   ? pickCurrentProjectId(null, remoteProjects)
                   : state.currentProjectId,
+              projectDetails: nextDetails,
             }
           })
           return
@@ -324,6 +449,9 @@ export const useProjectStore = create(
           const localProjects = sortProjects(
             state.localProjects.filter((project) => project.id !== id)
           )
+          const nextDetails = { ...state.projectDetails }
+          delete nextDetails[id]
+
           return {
             localProjects,
             projects: state.mode === 'local' ? localProjects : state.projects,
@@ -335,6 +463,7 @@ export const useProjectStore = create(
               state.localCurrentProjectId === id
                 ? pickCurrentProjectId(null, localProjects)
                 : state.localCurrentProjectId,
+            projectDetails: nextDetails,
           }
         })
       },
@@ -360,6 +489,7 @@ export const useProjectStore = create(
           projects: localProjects,
           currentProjectId: localCurrentProjectId,
           remoteProjects: [],
+          projectDetails: {},
           mode: 'local',
           projectsReady: true,
           projectsLoading: false,

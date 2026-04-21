@@ -1,0 +1,15 @@
+.git
+.github
+.cursor
+.playwright-cli
+.vscode
+node_modules
+dist
+dist-ssr
+backend
+ai-api
+docs
+*.log
+.env
+.env.*
+vite-dev.log

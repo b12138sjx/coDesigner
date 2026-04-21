@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { SAMPLE_APIS, SAMPLE_PROJECT_ID } from '@/utils/mockData'
 
+const EMPTY_APIS = []
+
 export const useApiStore = create(
   persist(
     (set) => ({
@@ -44,7 +46,7 @@ export const useApiStore = create(
             ),
           },
         })),
-      getApis: (projectId) => useApiStore.getState().apisByProject[projectId] || [],
+      getApis: (projectId) => useApiStore.getState().apisByProject[projectId] ?? EMPTY_APIS,
     }),
     {
       name: 'codesigner-apis',
