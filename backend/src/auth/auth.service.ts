@@ -20,6 +20,11 @@ import { RegisterDto } from './dto/register.dto'
 @Injectable()
 export class AuthService {
   private readonly saltRounds = 10
+  private readonly sampleProject = {
+    projectKey: 'sample_project',
+    name: '样例项目 · 协同设计演示',
+    brief: '演示画布设计、智能文档、接口协同三个模块的一体化使用。',
+  }
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
@@ -57,6 +62,15 @@ export class AuthService {
           data: {
             userId: createdUser.id,
             passwordHash,
+          },
+        })
+
+        await tx.project.create({
+          data: {
+            ownerUserId: createdUser.id,
+            projectKey: this.sampleProject.projectKey,
+            name: this.sampleProject.name,
+            brief: this.sampleProject.brief,
           },
         })
 
