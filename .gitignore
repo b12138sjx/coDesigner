@@ -15,6 +15,7 @@ dist-ssr
 ai-api/.next/
 ai-api/node_modules/
 ai-api/.env
+backend/.env
 
 # Editor directories and files
 .vscode/*
