@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { handleOptions, createJsonResponse } from '@/lib/cors'
-import { generateText } from '@/lib/openai'
+import { generateText } from '@/lib/deepseek'
 import { buildTransformPrompt, buildFallbackTransform } from '@/lib/prompts'
 
 const TRANSFORM_INSTRUCTIONS = [

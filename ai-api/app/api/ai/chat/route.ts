@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { handleOptions, createJsonResponse } from '@/lib/cors'
-import { generateText } from '@/lib/openai'
+import { generateText } from '@/lib/deepseek'
 import { buildChatPrompt, buildFallbackChat } from '@/lib/prompts'
 
 const CHAT_INSTRUCTIONS = [

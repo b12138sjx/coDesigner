@@ -76,12 +76,12 @@ export function buildTransformPrompt(payload: TransformPayload) {
 export function buildFallbackChat(payload: ChatPayload) {
   return {
     assistantMessage: [
-      'AI 服务已接通，但当前未配置 OPENAI_API_KEY，所以这是本地 fallback 回复。',
+      'AI 服务已接通，但当前未配置 DEEPSEEK_API_KEY，所以这是本地 fallback 回复。',
       '',
       `你刚才的问题是：${payload.message}`,
       payload.selectionText ? `当前选中内容：${payload.selectionText}` : '当前没有选中文本。',
       '',
-      '接下来只要在 ai-api 服务里补上 OPENAI_API_KEY 和 OPENAI_MODEL，就会自动切换为真实模型响应。',
+      '接下来只要在 ai-api 服务里补上 DEEPSEEK_API_KEY 和 DEEPSEEK_MODEL，就会自动切换为真实模型响应。',
     ].join('\n'),
     suggestedActions: ['补充验收标准', '拆分任务', '生成接口说明'],
   }
